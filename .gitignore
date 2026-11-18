@@ -1,0 +1,17 @@
+# private: account, billing, spend data
+private/
+# local state and secrets
+.agentdoor/
+.env
+.env.*
+!.env.example
+# build / deps
+node_modules/
+out/
+dist/
+coverage/
+playwright-report/
+test-results/
+# tooling
+.remember/
+.DS_Store

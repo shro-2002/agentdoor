@@ -1,0 +1,13 @@
+services:
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: agentdoor-local-only
+      MYSQL_DATABASE: agentdoor
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pagentdoor-local-only"]
+      interval: 5s
+      timeout: 3s
+      retries: 20

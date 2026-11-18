@@ -1,0 +1,36 @@
+{
+  "name": "agentdoor",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/core",
+    "packages/ui",
+    "apps/shop",
+    "apps/launcher"
+  ],
+  "scripts": {
+    "test": "AGENTDOOR_LLM_MODE=replay vitest run",
+    "typecheck": "tsc -b --noEmit",
+    "e2e": "playwright test",
+    "launcher": "tsx apps/launcher/src/server.ts",
+    "shop": "tsx apps/shop/src/server.ts",
+    "deploy": "tsx scripts/deploy.ts"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.65.1",
+    "@types/express": "5.0.6",
+    "@types/node": "26.6.6",
+    "esbuild": "0.28.2",
+    "fast-check": "4.10.3",
+    "playwright": "1.65.1",
+    "prettier": "3.10.1",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vitest": "5.1.1"
+  }
+}

@@ -1,0 +1,495 @@
+{
+  "schemaVersion": 1,
+  "business": {
+    "name": "Meera's Kitchen",
+    "slug": "meeras-kitchen",
+    "ownerFirstName": "Meera",
+    "city": "Pune",
+    "languages": ["en", "hinglish"],
+    "timezone": "Asia/Kolkata",
+    "currency": "INR"
+  },
+  "catalog": [
+    {
+      "id": "choco-cake",
+      "name": {
+        "en": "Chocolate cake",
+        "hi": "चॉकलेट केक"
+      },
+      "unit": "kg",
+      "unitPricePaise": 60000,
+      "minQty": 1,
+      "maxQtyPerOrder": 3,
+      "prepHours": 48,
+      "capacityUnitsPerQty": 2,
+      "options": [
+        {
+          "id": "message-on-cake",
+          "label": {
+            "en": "Message on cake"
+          },
+          "surchargePaise": 5000
+        }
+      ],
+      "dietary": ["contains_nuts"]
+    },
+    {
+      "id": "eggless-vanilla-cake",
+      "name": {
+        "en": "Eggless vanilla cake",
+        "hi": "एगलेस वनीला केक"
+      },
+      "unit": "kg",
+      "unitPricePaise": 65000,
+      "minQty": 1,
+      "maxQtyPerOrder": 3,
+      "prepHours": 48,
+      "capacityUnitsPerQty": 2,
+      "options": [],
+      "dietary": ["eggless"]
+    },
+    {
+      "id": "cookie-box",
+      "name": {
+        "en": "Cookie box",
+        "hi": "कुकी बॉक्स"
+      },
+      "unit": "box",
+      "unitPricePaise": 35000,
+      "minQty": 1,
+      "maxQtyPerOrder": 10,
+      "prepHours": 24,
+      "capacityUnitsPerQty": 1,
+      "options": [],
+      "dietary": []
+    },
+    {
+      "id": "brownie-dozen",
+      "name": {
+        "en": "Brownies (dozen)",
+        "hi": "ब्राउनी (दर्जन)"
+      },
+      "unit": "dozen",
+      "unitPricePaise": 48000,
+      "minQty": 1,
+      "maxQtyPerOrder": 5,
+      "prepHours": 24,
+      "capacityUnitsPerQty": 1,
+      "options": [],
+      "dietary": ["contains_nuts"]
+    }
+  ],
+  "capacity": {
+    "unitsPerDay": 10,
+    "overrides": []
+  },
+  "schedule": {
+    "closedWeekdays": [1],
+    "closedDates": [],
+    "minLeadHours": 48,
+    "dailyCutoff": "18:00",
+    "maxAdvanceDays": 30
+  },
+  "rush": {
+    "withinHours": 24,
+    "surcharge": {
+      "kind": "flat",
+      "paise": 20000
+    },
+    "maxRushUnitsPerDay": 2
+  },
+  "fulfilment": {
+    "pickup": {
+      "enabled": true,
+      "areaLabel": "Baner"
+    },
+    "delivery": {
+      "enabled": true,
+      "unlistedArea": "REFUSE",
+      "areas": [
+        {
+          "id": "baner",
+          "name": "Baner",
+          "aliases": ["baner"],
+          "feePaise": 0
+        },
+        {
+          "id": "aundh",
+          "name": "Aundh",
+          "aliases": ["aundh"],
+          "feePaise": 8000
+        },
+        {
+          "id": "wakad",
+          "name": "Wakad",
+          "aliases": ["wakad"],
+          "feePaise": 12000
+        },
+        {
+          "id": "hinjewadi",
+          "name": "Hinjewadi",
+          "aliases": ["hinjawadi", "hinjewadi"],
+          "feePaise": 15000
+        }
+      ]
+    }
+  },
+  "orderRules": {
+    "minOrderPaise": 30000,
+    "maxLinesPerOrder": 6,
+    "customRequests": "ASK_OWNER",
+    "quoteValidityMinutes": 30,
+    "negotiation": "NEVER"
+  },
+  "cancellation": {
+    "freeCancelHours": 24,
+    "note": {
+      "en": "Free cancellation up to 24 hours before delivery."
+    }
+  },
+  "provenance": {
+    "catalog[choco-cake].unitPricePaise": {
+      "source": {
+        "kind": "transcript",
+        "quote": "chocolate cake is 600 rupees a kg",
+        "turn": 1
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: catalog[choco-cake].unitPricePaise"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "catalog[choco-cake].maxQtyPerOrder": {
+      "source": {
+        "kind": "transcript",
+        "quote": "chocolate cake is 600 rupees a kg",
+        "turn": 1
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: catalog[choco-cake].maxQtyPerOrder"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "catalog[choco-cake].prepHours": {
+      "source": {
+        "kind": "transcript",
+        "quote": "chocolate cake is 600 rupees a kg",
+        "turn": 1
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: catalog[choco-cake].prepHours"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "catalog[eggless-vanilla-cake].unitPricePaise": {
+      "source": {
+        "kind": "transcript",
+        "quote": "eggless vanilla is 650 a kg",
+        "turn": 1
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: catalog[eggless-vanilla-cake].unitPricePaise"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "catalog[eggless-vanilla-cake].maxQtyPerOrder": {
+      "source": {
+        "kind": "transcript",
+        "quote": "eggless vanilla is 650 a kg",
+        "turn": 1
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: catalog[eggless-vanilla-cake].maxQtyPerOrder"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "catalog[eggless-vanilla-cake].prepHours": {
+      "source": {
+        "kind": "transcript",
+        "quote": "eggless vanilla is 650 a kg",
+        "turn": 1
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: catalog[eggless-vanilla-cake].prepHours"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "catalog[cookie-box].unitPricePaise": {
+      "source": {
+        "kind": "transcript",
+        "quote": "cookie box 350",
+        "turn": 1
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: catalog[cookie-box].unitPricePaise"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "catalog[cookie-box].maxQtyPerOrder": {
+      "source": {
+        "kind": "transcript",
+        "quote": "cookie box 350",
+        "turn": 1
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: catalog[cookie-box].maxQtyPerOrder"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "catalog[cookie-box].prepHours": {
+      "source": {
+        "kind": "transcript",
+        "quote": "cookie box 350",
+        "turn": 1
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: catalog[cookie-box].prepHours"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "catalog[brownie-dozen].unitPricePaise": {
+      "source": {
+        "kind": "transcript",
+        "quote": "brownies 480 for a dozen",
+        "turn": 1
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: catalog[brownie-dozen].unitPricePaise"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "catalog[brownie-dozen].maxQtyPerOrder": {
+      "source": {
+        "kind": "transcript",
+        "quote": "brownies 480 for a dozen",
+        "turn": 1
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: catalog[brownie-dozen].maxQtyPerOrder"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "catalog[brownie-dozen].prepHours": {
+      "source": {
+        "kind": "transcript",
+        "quote": "brownies 480 for a dozen",
+        "turn": 1
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: catalog[brownie-dozen].prepHours"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "capacity.unitsPerDay": {
+      "source": {
+        "kind": "transcript",
+        "quote": "I can do about 10 units in a day",
+        "turn": 1
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: capacity.unitsPerDay"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "schedule.minLeadHours": {
+      "source": {
+        "kind": "transcript",
+        "quote": "I need 2 days notice",
+        "turn": 1
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: schedule.minLeadHours"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "schedule.closedWeekdays": {
+      "source": {
+        "kind": "transcript",
+        "quote": "I am closed on Mondays",
+        "turn": 1
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: schedule.closedWeekdays"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "rush": {
+      "source": {
+        "kind": "transcript",
+        "quote": "same day rush costs 200 extra, only 2 rush orders",
+        "turn": 1
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: rush"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "fulfilment.delivery.enabled": {
+      "source": {
+        "kind": "owner_edit",
+        "note": "AgentDoor default — confirm"
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: fulfilment.delivery.enabled"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "fulfilment.delivery.unlistedArea": {
+      "source": {
+        "kind": "transcript",
+        "quote": "I do not deliver anywhere else",
+        "turn": 1
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: fulfilment.delivery.unlistedArea"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "orderRules.minOrderPaise": {
+      "source": {
+        "kind": "transcript",
+        "quote": "minimum order 300",
+        "turn": 1
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: orderRules.minOrderPaise"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "orderRules.customRequests": {
+      "source": {
+        "kind": "owner_edit",
+        "note": "AgentDoor default — confirm"
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: orderRules.customRequests"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "orderRules.quoteValidityMinutes": {
+      "source": {
+        "kind": "owner_edit",
+        "note": "AgentDoor default — confirm"
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: orderRules.quoteValidityMinutes"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "fulfilment.delivery.areas[baner].feePaise": {
+      "source": {
+        "kind": "owner_edit",
+        "note": "AgentDoor default — confirm"
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: fulfilment.delivery.areas[baner].feePaise"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "fulfilment.delivery.areas[aundh].feePaise": {
+      "source": {
+        "kind": "owner_edit",
+        "note": "AgentDoor default — confirm"
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: fulfilment.delivery.areas[aundh].feePaise"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "fulfilment.delivery.areas[wakad].feePaise": {
+      "source": {
+        "kind": "owner_edit",
+        "note": "AgentDoor default — confirm"
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: fulfilment.delivery.areas[wakad].feePaise"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    },
+    "fulfilment.delivery.areas[hinjewadi].feePaise": {
+      "source": {
+        "kind": "owner_edit",
+        "note": "AgentDoor default — confirm"
+      },
+      "readback": {
+        "lang": "en",
+        "text": "Confirmed: fulfilment.delivery.areas[hinjewadi].feePaise"
+      },
+      "confidence": "high",
+      "status": "approved",
+      "approvedAt": "2026-11-18T12:00:00+05:30"
+    }
+  }
+}

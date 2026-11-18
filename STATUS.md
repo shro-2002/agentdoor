@@ -35,6 +35,8 @@ Keep this under ~150 lines. Newest entries on top within each section. Each task
 
 ## Task log
 <!-- T## — date — result (done/blocked) — key decisions — open issues — next -->
+- T02 — 2026-11-18 — done — npm workspaces (core, ui stub, shop, launcher), all deps installed exact (zod 4, vitest 5, TS 7); strict domain schemas, separate unbounded wire schemas (CompileResult, ScenarioWire), canonicalJson + policyHash, fixtures policy.bakery/seeded-leaky; U-SCH-1..4, U-HASH-1..3, U-CMP-7 (schema half) green (49 tests). Decisions: vitest 5 has no `vitest.workspace.ts`, so `vitest.config.ts` with `test.projects`; wire `Localized.hi` is `string|null` (domain: optional), mapping code must drop nulls; check-secrets.sh skips `planning/` (docs quote the patterns). Next: T03 engine. Not done: Prettier/ESLint config beyond defaults, Playwright browsers not installed.
+- T01 — 2026-11-18 — **BLOCKED (partial)** — no Economy subscription (`totalAvailableSlots: 0`), no domain/mailbox: T00 purchases not done, and I never purchase. Done: `spike/` built and verified locally (healthz/ip/env/db/mail/sse/MCP stateless), `scripts/set-secrets.mjs`, the single app `agentdoor-shop` created (id in `.agentdoor/deploy.json`), spike uploaded to PREVIEW (import ~10 s). Details in `spike/RESULTS.md`. Next: you buy Economy (T00), then resume at `subscription attach`. Also needs `CONTACT_FORM_RECIPIENT_EMAIL` in private/ACCOUNT_FACTS.md (not recorded yet).
 
 ## Review findings (R0–R4)
 <!-- ID — gate — severity — finding — fix task — status -->

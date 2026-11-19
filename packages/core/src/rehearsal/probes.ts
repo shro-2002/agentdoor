@@ -146,31 +146,23 @@ function rushCapProbes(ctx: CleanContext): Draft[] {
   return [];
 }
 
-/** Repeats the highest-capacity item (within line and quantity limits) until it exceeds the day. */
+/** One line per distinct item (limits are per order), biggest capacity first, until the day is exceeded. */
 function capacityProbes(ctx: CleanContext): Draft[] {
   const { policy } = ctx;
-  const best = [...policy.catalog].sort(
+  const byCapacity = [...policy.catalog].sort(
     (a, b) =>
       b.maxQtyPerOrder * b.capacityUnitsPerQty -
       a.maxQtyPerOrder * a.capacityUnitsPerQty,
-  )[0]!;
-  const lines = Array.from(
-    { length: policy.orderRules.maxLinesPerOrder },
-    () => ({
-      itemId: best.id,
-      qty: best.maxQtyPerOrder,
-      optionIds: [] as string[],
-    }),
   );
-  const needed =
-    Math.floor(
-      ctx.capacityUnits / (best.maxQtyPerOrder * best.capacityUnitsPerQty),
-    ) + 1;
-  const used = lines.slice(0, needed);
+  const used: QuoteRequest["lines"] = [];
+  for (const item of byCapacity.slice(0, policy.orderRules.maxLinesPerOrder)) {
+    used.push({ itemId: item.id, qty: item.maxQtyPerOrder, optionIds: [] });
+    if (basketUnits(used, policy) > ctx.capacityUnits) break;
+  }
   const overCapacity = basketUnits(used, policy) > ctx.capacityUnits;
   const meetsMin =
     basketSubtotal(used, policy) >= policy.orderRules.minOrderPaise;
-  if (needed > lines.length || !overCapacity || !meetsMin) return [];
+  if (!overCapacity || !meetsMin) return [];
   return [
     {
       family: "CAPACITY",
@@ -341,8 +333,10 @@ function randomBasket(
       Math.floor(
         rand() * Math.min(MAX_BASKET_LINES, policy.orderRules.maxLinesPerOrder),
       );
-    const lines = Array.from({ length: count }, () => {
-      const item = pick(policy.catalog);
+    // Distinct items only: per-order limits apply to an item's total across lines.
+    const pool = [...policy.catalog];
+    const lines = Array.from({ length: Math.min(count, pool.length) }, () => {
+      const item = pool.splice(Math.floor(rand() * pool.length), 1)[0]!;
       const top = Math.min(item.maxQtyPerOrder, item.minQty + QTY_SPREAD);
       return {
         itemId: item.id,

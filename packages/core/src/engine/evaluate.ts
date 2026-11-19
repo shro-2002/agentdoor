@@ -65,8 +65,18 @@ function resolveLines(
   return { resolved };
 }
 
-function checkQuantities(resolved: Resolved[]): Refusal {
+/** Limits are per order, so repeated lines of one item count as their sum. */
+function totalPerItem(resolved: Resolved[]): Resolved[] {
+  const totals = new Map<string, Resolved>();
   for (const { item, qty } of resolved) {
+    const seen = totals.get(item.id);
+    totals.set(item.id, { item, qty: (seen?.qty ?? 0) + qty });
+  }
+  return [...totals.values()];
+}
+
+function checkQuantities(resolved: Resolved[]): Refusal {
+  for (const { item, qty } of totalPerItem(resolved)) {
     if (qty < item.minQty) {
       return [
         reason("QTY_BELOW_MIN", `catalog[${item.id}].minQty`, {

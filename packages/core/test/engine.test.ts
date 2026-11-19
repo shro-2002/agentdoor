@@ -206,6 +206,16 @@ describe("U-ENG-7 quantity bounds", () => {
     expect(codes(evaluate(p(), pickupReq("cookie-box", 11), NOW))).toEqual([
       "QTY_ABOVE_MAX",
     ]));
+  it("splitting one item across lines cannot beat the per-order maximum", () => {
+    const req = pickupReq("cookie-box", 6);
+    req.lines.push({ itemId: "cookie-box", qty: 6, optionIds: [] });
+    expect(codes(evaluate(p(), req, NOW))).toEqual(["QTY_ABOVE_MAX"]);
+  });
+  it("repeated lines within the maximum still quote", () => {
+    const req = pickupReq("cookie-box", 2);
+    req.lines.push({ itemId: "cookie-box", qty: 3, optionIds: [] });
+    expect(evaluate(p(), req, NOW).outcome).toBe("QUOTED");
+  });
   it("too many lines", () => {
     const b = bakery();
     b.orderRules.maxLinesPerOrder = 1;
@@ -277,7 +287,7 @@ describe("U-ENG-10 single-order capacity", () => {
   const two = (date = FAR_DATE) => ({
     lines: [
       { itemId: "choco-cake", qty: 3, optionIds: [] },
-      { itemId: "choco-cake", qty: 3, optionIds: [] },
+      { itemId: "eggless-vanilla-cake", qty: 3, optionIds: [] },
     ],
     fulfilment: { kind: "pickup" as const },
     date,

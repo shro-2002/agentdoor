@@ -6,7 +6,7 @@ import { LIMITS, accessCodeMatches } from "./config.js";
 import { COOKIE_MAX_AGE_MS, WORKSPACE_COOKIE, newId, signDraftCookie } from "./cookie.js";
 import { HOUR_MS, HTTP, type RouteKit } from "./route-kit.js";
 import { emptyState } from "./state.js";
-import { createDraft, getDraft, hit, peekHits, pruneHits } from "./store.js";
+import { createDraft, getDraft, hit, pruneHits } from "./store.js";
 import { exampleText } from "./views/examples.js";
 import { accessStepPage, businessesPage, startPage } from "./views/start.js";
 import type { Tone } from "./views/kit.js";
@@ -55,12 +55,10 @@ export function registerStart(kit: RouteKit): void {
       const code = str(req.body?.code, MAX_CODE_CHARS);
       // No session and no code in this request: nothing is created. The access step asks for the code.
       if (code === "") return send(res, accessStepPage({ description, flash: null }), HTTP.forbidden);
-      // Counted before the comparison: once an address has used its guesses, even the right code is refused.
-      if ((await peekHits(pool, "code_fail", ip, HOUR_MS, now())) >= LIMITS.wrongCodesPerIpPerHour) return refuse(res, description, "Too many wrong codes. Try again in an hour.", HTTP.tooMany);
-      if (!accessCodeMatches(code, expected)) {
-        await hit(pool, "code_fail", ip, HOUR_MS, LIMITS.wrongCodesPerIpPerHour, now());
-        return refuse(res, description, "That access code is not right.", HTTP.forbidden);
-      }
+      // Every attempt is counted atomically before the comparison, so parallel guesses cannot slip past the limit;
+      // once an address has used its attempts, even the right code is refused.
+      if (!(await hit(pool, "code_fail", ip, HOUR_MS, LIMITS.wrongCodesPerIpPerHour, now()))) return refuse(res, description, "Too many wrong codes. Try again in an hour.", HTTP.tooMany);
+      if (!accessCodeMatches(code, expected)) return refuse(res, description, "That access code is not right.", HTTP.forbidden);
       grant = issueCookie;
     }
     if (!(await hit(pool, "draft_new", ip, HOUR_MS, LIMITS.draftsPerIpPerHour, now()))) return send(res, landing(req, { tone: "bad", text: "That is enough new businesses for now. Try again later." }, description), HTTP.tooMany);

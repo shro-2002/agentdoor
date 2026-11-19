@@ -147,4 +147,15 @@ describe("early access: who may create a draft", () => {
     await shop.jobs.idle();
     expect((await shop.browser().post("/launch", { description: BENGALURU }, forIp(41))).status).toBe(429);
   });
+
+  it("parallel wrong guesses cannot exceed the per-address limit", async () => {
+    shop = await startWorkspaceShop();
+    const tries = LIMITS.wrongCodesPerIpPerHour + 4;
+    const statuses = await Promise.all(Array.from({ length: tries }, () => shop!.browser().post("/launch", { description: BENGALURU, code: "wrong-guess" }, forIp(77)).then((r) => r.status)));
+    // Fail-closed under contention: never more than the limit get a verdict on their guess, the rest are refused.
+    expect(statuses.filter((s) => s === 403).length).toBeLessThanOrEqual(LIMITS.wrongCodesPerIpPerHour);
+    expect(statuses.filter((s) => s === 429).length).toBeGreaterThanOrEqual(tries - LIMITS.wrongCodesPerIpPerHour);
+    expect(statuses.every((s) => s === 403 || s === 429)).toBe(true);
+    expect(await draftCount(shop)).toBe(0);
+  });
 });

@@ -13,6 +13,8 @@ import { pagesRouter } from "./routes/pages.js";
 import { requestId, securityHeaders } from "./security/headers.js";
 import { createLimiters } from "./security/rate-limits.js";
 import type { ServiceContext } from "./services/context.js";
+import { setOwnerContact } from "./views/site.js";
+import { identityOf } from "./views/storefront.js";
 
 /**
  * Measured in T01 (spike/RESULTS.md): the GoDaddy edge is exactly one hop in front of the app and
@@ -20,6 +22,8 @@ import type { ServiceContext } from "./services/context.js";
  * client-forged header and let anyone pick their own rate-limit key.
  */
 export const TRUSTED_PROXY_HOPS = 1;
+
+export const ROBOTS_TXT = "User-agent: *\nAllow: /\n";
 
 export interface AppDeps {
   config: ShopConfig;
@@ -64,12 +68,17 @@ export function createApp(deps: AppDeps): Express {
     now: deps.now ?? Date.now,
     log,
   };
+  setOwnerContact(deps.config.contactRecipient);
   const limiters = createLimiters(log);
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", deps.trustProxyHops ?? TRUSTED_PROXY_HOPS);
 
   app.use(requestId);
+  app.use((_req, res, next) => {
+    res.locals.shopIdentity = identityOf(deps.launch);
+    next();
+  });
   app.use(securityHeaders(deps.config.publicBaseUrl));
   app.use((req, res, next) => {
     const start = performance.now();
@@ -94,6 +103,7 @@ export function createApp(deps: AppDeps): Express {
   app.use(ownerRouter(ctx, limiters));
   app.use(contactRouter(ctx, limiters, deps.sendEmail));
   app.use(pagesRouter(ctx, limiters));
+  app.get("/robots.txt", (_req, res) => void res.type("text/plain").send(ROBOTS_TXT));
   app.use((req, res) => sendError(req, res, "NOT_FOUND"));
   app.use(errorHandler(log));
   return app;

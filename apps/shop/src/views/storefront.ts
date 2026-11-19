@@ -9,6 +9,10 @@ export const NOT_LAUNCHED_BANNER = "Not launched: this shop isn't taking orders 
 export const identityOf = (launch: LaunchState): ShopIdentity | undefined =>
   launch.launched ? { name: launch.policy.business.name, hours: hoursLine(launch.policy) } : undefined;
 
+/** The policy has no tagline field, so the short line is fixed: "<Shop name> · Order online". */
+export const HOME_TAGLINE = "Order online";
+export const homeTitle = (shopName: string, tagline: string = HOME_TAGLINE): string => `${shopName} · ${tagline}`;
+
 export const bannerFor = (launch: LaunchState): string | undefined => (launch.launched ? undefined : NOT_LAUNCHED_BANNER);
 
 function dietaryTags(tags: string[]): SafeHtml {
@@ -129,7 +133,8 @@ export function storefrontPage(launch: LaunchState, nowMs: number): string {
     ${houseRules(policy)}
     ${delivery(policy)}`;
   return layout({
-    title: policy.business.name,
+    title: homeTitle(policy.business.name),
+    fullTitle: true,
     body,
     shop: identityOf(launch),
     active: "menu",

@@ -1,6 +1,7 @@
 import type { BusinessPolicy, LaunchRecord } from "@agentdoor/core";
 import { html, icon, statusChip, type SafeHtml } from "@agentdoor/ui";
 import type { LaunchState } from "../db/launch-state.js";
+import { approvalFigures, quoteEvidenceFigures, recordedRunFigures, type EvidenceQuotes, type RunFigures } from "../services/figures.js";
 import { isoDay } from "./format.js";
 import { gapTitle } from "./gap-words.js";
 import { layout } from "./layout.js";
@@ -42,15 +43,27 @@ export function groupGaps(rows: GapRow[], policy: BusinessPolicy): GapGroup[] {
     .sort((a, b) => Number(b.severity === "critical") - Number(a.severity === "critical") || b.count - a.count);
 }
 
-function summary(rec: LaunchRecord, found: number, fixed: number): SafeHtml {
+function summary(rec: LaunchRecord, policy: BusinessPolicy): SafeHtml {
+  const approvals = approvalFigures(policy);
+  const final = recordedRunFigures(rec);
   const tiles = [
-    { n: `${rec.approvals.approved}/${rec.approvals.required}`, l: "rules approved" },
-    { n: String(rec.rehearsal.probes + rec.rehearsal.scenarios), l: "checks run" },
-    { n: String(found), l: "gaps found" },
-    { n: String(fixed), l: "gaps fixed" },
+    { n: `${approvals.approvedRequired}/${approvals.required}`, l: "required rules approved" },
+    { n: String(final.checks), l: "checks in the final run" },
+    { n: String(final.gaps.found), l: "gaps found in all runs" },
+    { n: String(final.gaps.fixed), l: "gaps fixed" },
     { n: isoDay(rec.signedAt), l: "launched" },
   ];
   return html`<dl class="tiles" aria-label="Summary">${tiles.map((t) => html`<div class="tile"><dt class="tile__l">${t.l}</dt><dd class="tile__n">${t.n}</dd></div>`)}</dl>`;
+}
+
+/** The first and the final rehearsal run side by side, each labelled, so different numbers are never passed off as one. */
+export function runsTable(runs: RunFigures[]): SafeHtml {
+  return html`<div class="table-wrap"><table class="runs">
+    <caption class="visually-hidden">The first and the final rehearsal run</caption>
+    <thead><tr><th scope="col">Run</th><th scope="col" class="num">Checks</th><th scope="col" class="num">Passed</th><th scope="col" class="num">Gaps open</th></tr></thead>
+    <tbody>${runs.map((r) => html`<tr><th scope="row">${r.label}</th><td class="num">${r.checks}</td><td class="num">${r.passed}</td><td class="num">${r.gaps.open}</td></tr>`)}</tbody>
+  </table></div>
+  <ul class="muted runs-basis">${runs.map((r) => html`<li>${r.label}: ${r.basis}. Gaps open = gaps still unsettled when that run ended.</li>`)}</ul>`;
 }
 
 function caught(groups: GapGroup[], currentVersion: number): SafeHtml {
@@ -103,7 +116,14 @@ function forAgents(publicBaseUrl: string): SafeHtml {
   </section>`;
 }
 
-export function launchReportPage(launch: LaunchState, publicBaseUrl: string): string {
+export interface ReportExtras {
+  /** The recorded compile evidence, used to show the owner's original words where an edit replaced them. */
+  evidence?: EvidenceQuotes;
+  /** The first rehearsal run, recomputed from the recorded session, when the session is available. */
+  firstRun?: RunFigures;
+}
+
+export function launchReportPage(launch: LaunchState, publicBaseUrl: string, extras: ReportExtras = {}): string {
   if (!launch.launched) {
     const body = html`<section class="wrap section narrow"><h1 class="page-title">Launch report</h1>
       <p class="alert alert--error" role="alert">${icon("alert")}<span>This shop has not been launched, so there is no report to show. Reason: ${launch.reason}.</span></p></section>`;
@@ -111,7 +131,9 @@ export function launchReportPage(launch: LaunchState, publicBaseUrl: string): st
   }
   const { policy, record } = launch;
   const rows = record.rehearsal.gapsFound;
-  const fixed = rows.filter((r) => r.fixedInVersion !== null).length;
+  const approvals = approvalFigures(policy);
+  const quoted = quoteEvidenceFigures(policy, extras.evidence);
+  const runs = [...(extras.firstRun ? [extras.firstRun] : []), recordedRunFigures(record)];
   const owner = policy.business.ownerFirstName;
   const body = html`<section class="report-hero">
       <div class="wrap">
@@ -119,17 +141,19 @@ export function launchReportPage(launch: LaunchState, publicBaseUrl: string): st
         ${personaNote()}
         <h1 class="hero__title">How ${policy.business.name} was prepared for launch</h1>
         <p class="hero__lead">${owner} described the business in their own words. AgentDoor wrote the rules down, ${owner} approved each one, and a rehearsal tried to break them before any customer could.</p>
-        ${summary(record, rows.length, fixed)}
+        ${summary(record, policy)}
       </div>
     </section>
     <section class="wrap section" aria-labelledby="rules-h">
       <h2 id="rules-h" class="section__title">The rules, in ${owner}’s words</h2>
-      <p class="section__lead">Every rule shows what ${owner} said and how AgentDoor read it back.</p>
-      ${ruleGroups(policy)}
+      <p class="section__lead">Every rule shows what ${owner} said and how AgentDoor read it back. ${approvals.listed} rules are listed: the ${approvals.required} required ones are approved ${approvals.approvedRequired} of ${approvals.required}, and ${quoted.withQuote} of the ${quoted.total} point back to a sentence ${owner} said.</p>
+      ${ruleGroups(policy, extras.evidence)}
     </section>
     <section class="wrap section" aria-labelledby="caught-h">
       <h2 id="caught-h" class="section__title">What the rehearsal caught</h2>
-      <p class="section__lead">${record.rehearsal.probes} generated checks and ${record.rehearsal.scenarios} customer cases were run against the rules. ${record.rehearsal.passed} passed, and the gaps below were settled before launch.</p>
+      <p class="section__lead">${record.rehearsal.probes} generated checks and ${record.rehearsal.scenarios} customer cases were run against the final rules. ${record.rehearsal.passed} passed, and the gaps below were settled before launch.</p>
+      ${runs.length > 1 ? html`<p class="section__lead">The first run was on the rules as first written, before the owner had approved or fixed anything, so its numbers differ from the final run.</p>` : ""}
+      ${runsTable(runs)}
       ${caught(groupGaps(rows, policy), record.policyVersion)}
     </section>
     ${verify(launch)}

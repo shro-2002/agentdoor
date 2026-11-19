@@ -1,6 +1,7 @@
 import { html, icon, type SafeHtml } from "@agentdoor/ui";
 import type { LaunchState } from "../db/launch-state.js";
-import { layout } from "./layout.js";
+import { contactLink, layout } from "./layout.js";
+import { getOwnerContact } from "./site.js";
 import { bannerFor, identityOf } from "./storefront.js";
 
 export type ContactNotice = "sent" | "saved" | null;
@@ -13,12 +14,13 @@ function notice(n: ContactNotice, owner: string): SafeHtml {
   return html``;
 }
 
-export function contactPage(n: ContactNotice, launch: LaunchState): string {
+export function contactPage(n: ContactNotice, launch: LaunchState, contactEmail: string = getOwnerContact()): string {
   const owner = launch.launched ? launch.policy.business.ownerFirstName : "The owner";
   const body = html`<section class="wrap section narrow">
     <p class="eyebrow">Get in touch</p>
     <h1 class="page-title">Contact ${owner}</h1>
     <p class="section__lead">Questions about an order, a custom cake, or a delivery area we don't list? Write here and ${owner} will answer by email.</p>
+    ${contactLink(contactEmail).value ? html`<p class="contact-direct">Prefer email? Write to <strong>${contactLink(contactEmail)}</strong>.</p>` : ""}
     ${notice(n, owner)}
     <form method="post" action="/contact" class="order-form">
       <fieldset class="group">
@@ -35,5 +37,5 @@ export function contactPage(n: ContactNotice, launch: LaunchState): string {
       <p class="hint">${icon("check")} Your email is used only to reply to you.</p>
     </form>
   </section>`;
-  return layout({ title: "Contact", body, shop: identityOf(launch), banner: bannerFor(launch), active: "contact" });
+  return layout({ title: "Contact", body, shop: identityOf(launch), banner: bannerFor(launch), active: "contact", contactEmail });
 }

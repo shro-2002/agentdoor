@@ -13,6 +13,7 @@ import {
   stepTimeline,
   type SafeHtml,
 } from "@agentdoor/ui";
+import { quoteEvidenceFigures, type RunFigures } from "../services/figures.js";
 import type { GateCheck, LiveRun } from "../services/try-live.js";
 import { decisionFor } from "../services/try-live.js";
 import type { TrySession } from "../services/try-session.js";
@@ -20,6 +21,7 @@ import { inr, isoDay, shortDate } from "./format.js";
 import { gapWords } from "./gap-words.js";
 import { layout } from "./layout.js";
 import { OTHER_AREA, problemsFor } from "./order.js";
+import { runsTable } from "./report.js";
 import { ruleGroups } from "./rules-view.js";
 
 export type TryStep = "describe" | "rules" | "rehearse" | "launch";
@@ -105,7 +107,7 @@ export function introPage(session: TrySession | null, videoId: string | null): s
       <p class="eyebrow">Public replay · no key, no account, no cost</p>
       <h1 class="hero__title">From a baker's words to a shop that can't be talked into a bad deal</h1>
       <p class="hero__lead">A home baker wants customers and AI agents to order without a phone call, but doesn't want a stranger, or a clever agent, to haggle a cake down to nothing.</p>
-      <p class="hero__lead">AgentDoor writes the baker's rules down, has the baker approve each one, tries to break them, and only then opens the shop. This page replays a real run.</p>
+      <p class="hero__lead">AgentDoor writes the baker's rules down, has the baker approve each one, tries to break them, and only then opens the shop. This replay is a recording of a real run, and the blocks marked LIVE are computed now, when you load the page.</p>
       ${session
         ? html`<p class="hero__cta"><a class="btn btn--primary btn--lg" href="/try/describe">Start the replay <span aria-hidden="true">→</span></a><a class="btn btn--secondary btn--lg" href="#demo">Watch the demo</a></p>`
         : ""}
@@ -123,7 +125,7 @@ export function introPage(session: TrySession | null, videoId: string | null): s
       </div></section>${video(videoId)}`,
     );
   }
-  return page("Try AgentDoor", "intro", html`${lead}${video(videoId)}${legend()}`);
+  return page("Replay the launch", "intro", html`${lead}${video(videoId)}${legend()}`);
 }
 
 /* ---------- step 1: describe ---------- */
@@ -161,28 +163,29 @@ export function describePage(s: TrySession): string {
       : ""}
   </section>
   <section class="wrap section">${nextPrev("/try", "/try/rules", "Next: the rules")}</section>`;
-  return page("Describe · Try AgentDoor", "describe", body);
+  return page("Describe · Replay the launch", "describe", body);
 }
 
 /* ---------- step 2: rules ---------- */
 
 export function rulesPage(s: TrySession): string {
   const first = s.policyVersions[0]!;
+  const evidence = s.compile.result.evidence;
   const rules = Object.values(first.provenance);
   const low = rules.filter((r) => r.confidence === "low").length;
-  const quoted = rules.filter((r) => r.source.kind === "transcript").length;
+  const quoted = quoteEvidenceFigures(first, evidence).withQuote;
   const body = html`<section class="wrap section">
     <p class="eyebrow">Step 2 of 4 · Rules</p>
     <h1 class="page-title">Every rule, next to the owner's own words</h1>
-    <p class="section__lead">Claude wrote these ${rules.length} rules from the description. ${quoted} point back to a sentence the owner said. ${low > 0 ? `${low} are marked “please check”, because Claude was not sure.` : "None were marked uncertain."} In the launcher the owner approves each one before anything goes live.</p>
+    <p class="section__lead">Claude wrote these ${rules.length} rules from the description. In the first draft, ${quoted} point back to a sentence the owner said; the launch report counts the final rules, after the owner's answers and edits. ${low > 0 ? `${low} are marked “please check”, because Claude was not sure.` : "None were marked uncertain."} In the launcher the owner approves each one before anything goes live.</p>
   </section>
   <section class="wrap section block" aria-labelledby="rules-h">
     <h2 class="block__title" id="rules-h">The rules as Claude first wrote them</h2>
     ${provenanceBadge({ kind: "claude", note: `Rules and the evidence quotes behind them. ${claudeNote(s)}` })}
-    ${ruleGroups(first)}
+    ${ruleGroups(first, evidence)}
   </section>
   <section class="wrap section">${nextPrev("/try/describe", "/try/rehearse", "Next: the rehearsal")}</section>`;
-  return page("Rules · Try AgentDoor", "rules", body);
+  return page("Rules · Replay the launch", "rules", body);
 }
 
 /* ---------- step 3: rehearsal ---------- */
@@ -324,6 +327,8 @@ export interface RehearsePage {
   quote?: QuoteTry;
   /** The policy the mini-form quotes against (the shop's own when launched). */
   quotePolicy: BusinessPolicy;
+  /** First and final run, labelled; the same figures the launch report shows. */
+  runs?: RunFigures[];
 }
 
 export function rehearsePage(p: RehearsePage): string {
@@ -335,8 +340,13 @@ export function rehearsePage(p: RehearsePage): string {
     <p class="section__lead">It generates ${run.summary.probes} boundary checks (the minute before a deadline, a full day, a closed Monday...) and runs ${run.summary.scenarios} customer cases through the rule engine. Everything below is recomputed when you load the page.</p>
     <nav class="vtabs" aria-label="Policy version"><ul>${p.tabs.map((t) => html`<li><a href="/try/rehearse?v=${t.version}" ${t.version === run.version ? raw('aria-current="page"') : ""}>Version ${t.version} <span class="count ${t.criticalOpen > 0 ? "count--bad" : "count--ok"}">${t.criticalOpen > 0 ? `${t.criticalOpen} critical` : "clear"}</span></a></li>`)}</ul></nav>
   </section>
+  ${p.runs ? html`<section class="wrap section block" aria-labelledby="runs-h">
+    <h2 class="block__title" id="runs-h">First run and final run</h2>
+    <p class="section__lead">These are two different runs, so their numbers differ. The first run is on the rules as first written; the final run is on the rules that were launched.</p>
+    ${runsTable(p.runs)}
+  </section>` : ""}
   <section class="wrap section block" aria-labelledby="receipt-block-h">
-    <h2 class="block__title" id="receipt-block-h">The receipt</h2>
+    <h2 class="block__title" id="receipt-block-h">The receipt for version ${run.version}</h2>
     ${provenanceBadge({ kind: "live", note: `Computed now for policy version ${run.version}. No AI involved.` })}
     <dl class="tiles tiles--3" aria-label="Totals">
       <div class="tile"><dt class="tile__l">checks passed</dt><dd class="tile__n">${run.summary.passed}</dd></div>
@@ -353,7 +363,7 @@ export function rehearsePage(p: RehearsePage): string {
   <section class="wrap section">${scenariosBlock(s, run)}</section>
   <section class="wrap section">${miniForm(p.quotePolicy, p.earliest, p.quote)}</section>
   <section class="wrap section">${nextPrev("/try/rules", "/try/launch", "Next: launch")}</section>`;
-  return page("Rehearsal · Try AgentDoor", "rehearse", body);
+  return page("Rehearsal · Replay the launch", "rehearse", body);
 }
 
 /* ---------- step 4: launch ---------- */
@@ -415,6 +425,6 @@ export function launchPage(p: LaunchPage): string {
     </ul>
   </section>
   <section class="wrap section">${nextPrev("/try/rehearse", null, "")}</section>`;
-  return page("Launch · Try AgentDoor", "launch", body);
+  return page("Launch · Replay the launch", "launch", body);
 }
 

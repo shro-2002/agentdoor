@@ -10,7 +10,7 @@ test.describe("E2E-2 human order flow: menu -> quote -> request order -> status 
     await page.goto(`${SHOP()}/`);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.locator(".ribbon")).toContainText(RIBBON);
-    await expect(page.locator(".ribbon").getByRole("link", { name: /Try the launcher/ })).toHaveAttribute("href", "/try");
+    await expect(page.locator(".ribbon").getByRole("link", { name: /Replay the launch/ })).toHaveAttribute("href", "/try");
     await expect(page.locator(".dish").first()).toContainText("₹");
     const before = (await tableCounts()).orders;
     const url = await placeOrderViaPages(page);
@@ -24,6 +24,37 @@ test.describe("E2E-2 human order flow: menu -> quote -> request order -> status 
     expect(problems).toEqual([]);
     const wrong = await page.goto(url.replace(/t=.{6}/, "t=AAAAAA"));
     expect(wrong?.status()).toBe(404);
+  });
+
+  test("audit fixes: title, owner address, 404 page, robots, labelled runs", async ({ page, request }) => {
+    await page.goto(`${SHOP()}/`);
+    const title = await page.title();
+    expect(title).toMatch(/ · Order online$/);
+    expect(title.split(" · ")).toHaveLength(2);
+    await expect(page.locator("footer").getByRole("link", { name: "hello@example.test" })).toHaveAttribute("href", "mailto:hello@example.test");
+    await page.goto(`${SHOP()}/contact`);
+    await expect(page.locator("main").getByRole("link", { name: "hello@example.test" })).toBeVisible();
+
+    const missing = await page.goto(`${SHOP()}/no-such-page`);
+    expect(missing?.status()).toBe(404);
+    await expect(page.locator(".ribbon")).toContainText(RIBBON);
+    await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
+    const api = await request.get(`${SHOP()}/api/no-such`);
+    expect(api.status()).toBe(404);
+    expect((await api.json()).error.code).toBe("NOT_FOUND");
+    const robots = await request.get(`${SHOP()}/robots.txt`);
+    expect(robots.status()).toBe(200);
+    expect(robots.headers()["content-type"]).toContain("text/plain");
+    expect(await robots.text()).toContain("User-agent: *");
+
+    await page.goto(`${SHOP()}/launch-report`);
+    await expect(page.getByRole("rowheader", { name: "First rehearsal run" })).toBeVisible();
+    await expect(page.getByRole("rowheader", { name: "Final rehearsal run" })).toBeVisible();
+    await page.goto(`${SHOP()}/try/rehearse`);
+    await expect(page.getByRole("rowheader", { name: "First rehearsal run" })).toBeVisible();
+    await expect(page.getByRole("rowheader", { name: "Final rehearsal run" })).toBeVisible();
+    await page.goto(`${SHOP()}/try`);
+    await expect(page.locator("main")).toContainText("recording of a real run");
   });
 
   test.describe("without JavaScript", () => {

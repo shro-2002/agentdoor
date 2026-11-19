@@ -3,7 +3,10 @@ import { sendError } from "../http/envelope.js";
 import { findOrderForAccess } from "../db/queries.js";
 import type { Limiters } from "../security/rate-limits.js";
 import type { ServiceContext } from "../services/context.js";
+import { liveRunFigures } from "../services/figures.js";
 import { statusUrlFor } from "../services/order-service.js";
+import { runLive } from "../services/try-live.js";
+import { defaultBundleDir, sessionLoader } from "../services/try-session.js";
 import { launchReportPage } from "../views/report.js";
 import { storefrontPage } from "../views/storefront.js";
 import { orderStatusPage } from "../views/status.js";
@@ -25,8 +28,13 @@ export function pagesRouter(ctx: ServiceContext, limiters: Limiters): Router {
     res.type("html").send(storefrontPage(ctx.launch, ctx.now()));
   });
 
+  const loadSession = sessionLoader(defaultBundleDir());
   router.get("/launch-report", (_req, res) => {
-    res.type("html").send(launchReportPage(ctx.launch, ctx.config.publicBaseUrl));
+    const l = loadSession();
+    const extras = l.ok
+      ? { evidence: l.session.compile.result.evidence, firstRun: liveRunFigures("First rehearsal run", runLive(l.session, 1, ctx.now())) }
+      : {};
+    res.type("html").send(launchReportPage(ctx.launch, ctx.config.publicBaseUrl, extras));
   });
 
   router.get("/.well-known/agentdoor.json", (req, res) => {

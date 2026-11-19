@@ -36,6 +36,9 @@ export const TrySessionSchema = z.strictObject({
 });
 export type TrySession = z.infer<typeof TrySessionSchema>;
 
+/** Same folder the shop boots from (`BUNDLE_DIR`, else `./bundle`). */
+export const defaultBundleDir = (): string => process.env.BUNDLE_DIR ?? join(process.cwd(), "bundle");
+
 export type SessionLoad = { ok: true; session: TrySession } | { ok: false };
 
 /** Read from disk only when the file changed: a request costs one stat, not a re-parse. */

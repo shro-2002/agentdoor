@@ -1,5 +1,6 @@
-import type { BusinessPolicy } from "@agentdoor/core";
+import type { BusinessPolicy, RuleProvenance } from "@agentdoor/core";
 import { html, ruleCard, type RuleState, type SafeHtml } from "@agentdoor/ui";
+import { ownerQuoteFor, type EvidenceQuotes } from "../services/figures.js";
 import { getAt } from "../services/policy-paths.js";
 import { WEEKDAYS, inr } from "./format.js";
 
@@ -119,24 +120,38 @@ export interface RuleEntry {
   state: RuleState;
 }
 
-export function ruleEntries(policy: BusinessPolicy): RuleEntry[] {
+/** What the card says about where a rule came from. "AgentDoor suggested this" is only for a rule with no owner words behind it. */
+export const SUGGESTED_NOTE = "AgentDoor suggested this: the owner did not say it.";
+
+function sourceNote(src: RuleProvenance["source"], quote: string | null): string | null {
+  if (src.kind === "transcript") return null;
+  if (src.kind === "gap_fix") return "The owner decided this during the rehearsal: " + src.note;
+  if (src.note.startsWith("Owner reviewed")) return src.note;
+  const edited = src.note.startsWith("Edited");
+  if (quote) return edited ? "The owner said this, and later edited the rule in the launcher." : "The owner said this.";
+  if (edited) return "The owner set this in the launcher. No spoken quote is on record.";
+  if (src.note.startsWith("AgentDoor default")) return SUGGESTED_NOTE;
+  return "This rule could not be matched to the owner's own words.";
+}
+
+export function ruleEntries(policy: BusinessPolicy, evidence: EvidenceQuotes = []): RuleEntry[] {
   return Object.entries(policy.provenance)
     .map(([path, prov]) => {
       const d = describePath(policy, path);
       const base = LEAF_TITLE[d.leaf] ?? LEAF_TITLE[path] ?? path;
       const src = prov.source;
       const edited = src.kind !== "transcript" && src.note.startsWith("Edited");
+      const quote = ownerQuoteFor(path, prov, evidence);
       const state: RuleState =
-        prov.status === "approved" ? (edited ? "edited" : "approved") : prov.confidence === "low" ? "check" : src.kind === "owner_edit" ? "suggested" : "proposed";
-      const note =
-        src.kind === "transcript" ? null : src.kind === "gap_fix" ? `The owner decided this during the rehearsal: ${src.note}` : "AgentDoor suggested this: the owner did not say it.";
+        prov.status === "approved" ? (edited ? "edited" : "approved") : prov.confidence === "low" ? "check" : src.kind === "owner_edit" && !quote ? "suggested" : "proposed";
+      const note = sourceNote(src, quote);
       return {
         path,
         group: d.group,
         order: d.order,
         title: d.subject ? `${base} · ${d.subject}` : base,
         value: valueOf(d.leaf, getAt(policy, path).value ?? null, d.unit),
-        quote: src.kind === "transcript" ? src.quote : null,
+        quote,
         note,
         readback: prov.readback.text,
         readbackLang: prov.readback.lang === "hi" ? "hi" : "en",
@@ -147,8 +162,8 @@ export function ruleEntries(policy: BusinessPolicy): RuleEntry[] {
 }
 
 /** Group labels are paragraphs, not headings: each card already carries an h3. */
-export function ruleGroups(policy: BusinessPolicy): SafeHtml {
-  const entries = ruleEntries(policy);
+export function ruleGroups(policy: BusinessPolicy, evidence: EvidenceQuotes = []): SafeHtml {
+  const entries = ruleEntries(policy, evidence);
   return html`${GROUPS.map((g) => {
     const rules = entries.filter((r) => r.group === g.id);
     if (rules.length === 0) return "";

@@ -54,6 +54,12 @@ for (const w of WIDTHS) {
       await clean(page, `S4 thanks ${w}`);
     });
 
+    test("404 page", async ({ page }) => {
+      const res = await page.goto(`${SHOP()}/no-such-page`);
+      expect(res?.status()).toBe(404);
+      await clean(page, `404 ${w}`);
+    });
+
     test("S5 launch report", async ({ page }) => {
       await page.goto(`${SHOP()}/launch-report`);
       await clean(page, `S5 ${w}`);

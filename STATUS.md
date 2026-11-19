@@ -133,3 +133,7 @@ R0 run 2026-11-18 19:10 IST. Verdict: **CONDITIONAL GO**. All P0 fixes applied t
 ## Open issues / requests between lanes
 <!-- lane B → lane A core change requests go here -->
 - T13c — 2026-11-19 — **done** — submission docs: README.md, docs/BRIEF.md, docs/architecture.svg, docs/demo-script.md (docs only, no code changed).
+
+- T13d — 2026-11-19 — done — audit fixes: (1) page titles never repeat the shop name (home = "<Shop> · Order online"); (2) owner mailbox (CONTACT_FORM_RECIPIENT_EMAIL) as mailto on /contact and footer; (3) ribbon/footer link renamed "Replay the launch", /try says it is a recording with LIVE blocks computed now; (4) friendly HTML 404 for browsers (JSON kept for /api, /mcp, /.well-known), /robots.txt; (5) `REPO_URL` in `views/site.ts` (empty: fill later); (6) MIT LICENSE.
+  (7) Numbers: one helper file `services/figures.ts` (quote evidence, approved-of-required, gaps, labelled runs). Cause was view code, not bundle: /try/rehearse showed a live recompute of version 1 (30 open, 46 passed) while the report showed the signed final run (50 checks, 45 passed); both now show "First rehearsal run" and "Final rehearsal run" rows. Report counts quotes with the compile-evidence fallback; /try/rules says "In the first draft, N". bundle/ untouched, no re-launch.
+  Tests: apps/shop/test/audit-fixes.test.ts (real demo-world session shape), e2e specs updated (404 a11y, labels). docs/screens not regenerated. Open: fill REPO_URL and DEMO_VIDEO_ID.

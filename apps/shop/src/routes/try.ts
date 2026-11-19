@@ -5,6 +5,7 @@ import { formBody } from "../http/body.js";
 import { requireSameOrigin } from "../security/origin.js";
 import type { Limiters } from "../security/rate-limits.js";
 import type { ServiceContext } from "../services/context.js";
+import { liveRunFigures, recordedRunFigures } from "../services/figures.js";
 import { firstProblemVersion, gateChecks, runLive } from "../services/try-live.js";
 import { sessionLoader, type TrySession } from "../services/try-session.js";
 import { earliestDate } from "../views/format.js";
@@ -72,6 +73,10 @@ export function tryRouter(ctx: ServiceContext, limiters: Limiters, opts: TryOpti
         tabs: runs.map((r) => ({ version: r.version, criticalOpen: r.summary.criticalOpen })),
         earliest: earliestDate(quotePolicy, nowMs),
         quotePolicy,
+        runs: [
+          liveRunFigures("First rehearsal run", runs[0]!),
+          ctx.launch.launched ? recordedRunFigures(ctx.launch.record) : liveRunFigures("Final rehearsal run", runs[last - 1]!),
+        ],
         ...(quote ? { quote } : {}),
       }),
     );

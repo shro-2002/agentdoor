@@ -103,8 +103,13 @@ export function sendError(req: Request, res: Response, code: ErrorCode, opts: Er
     res.setHeader("Retry-After", String(RETRY_AFTER_SECONDS));
   }
   if (wantsHtml(req)) {
-    const body = html`<h1>${message}</h1><p><a href="/">Back to the shop</a></p>`;
-    res.status(status).type("html").send(layout({ title: message, body }));
+    const body =
+      code === "NOT_FOUND"
+        ? html`<section class="wrap section narrow"><p class="eyebrow">Error 404</p><h1 class="page-title">We couldn't find that page</h1>
+            <p class="section__lead">The address may be old or mistyped.</p>
+            <p><a class="btn btn--primary" href="/">See the menu</a> <a class="btn btn--secondary" href="/contact">Contact the owner</a></p></section>`
+        : html`<h1>${message}</h1><p><a href="/">Back to the shop</a></p>`;
+    res.status(status).type("html").send(layout({ title: code === "NOT_FOUND" ? "Page not found" : message, body, shop: res.locals.shopIdentity }));
     return;
   }
   res.status(status).json({

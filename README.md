@@ -106,4 +106,4 @@ Unpaid orders hold capacity until the owner declines them. `schedule.dailyCutoff
 
 ## License
 
-License: to be added.
+License: MIT

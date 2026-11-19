@@ -12,6 +12,17 @@ export default defineConfig({
           environment: "node",
         },
       },
+      {
+        test: {
+          name: "shop",
+          root: "apps/shop",
+          include: ["test/**/*.test.ts"],
+          environment: "node",
+          // Integration tests share one MySQL schema, so files must not overlap.
+          fileParallelism: false,
+          testTimeout: 30_000,
+        },
+      },
     ],
   },
 });

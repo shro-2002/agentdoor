@@ -1,8 +1,8 @@
 /**
  * Site-wide settings shown in the shop chrome.
- * REPO_URL is empty on purpose: it is filled in later, and the footer shows "Source code" only when it is set.
+ * REPO_URL is the public source repository; the footer shows "Source code" only when it is non-empty.
  */
-export const REPO_URL = "";
+export const REPO_URL = "https://github.com/shro-2002/agentdoor";
 
 /**
  * The owner's public mailbox (the CONTACT_FORM_RECIPIENT_EMAIL config value), set once at app start.

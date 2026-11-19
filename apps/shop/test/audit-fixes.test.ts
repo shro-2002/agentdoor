@@ -84,10 +84,13 @@ describe("finding 3: the ribbon link is honest", () => {
 });
 
 describe("finding 5: REPO_URL", () => {
-  it("is empty by default, so no Source code link; a value shows a noopener link", async () => {
+  it("links the public repo by default; an empty override hides it; a value shows a noopener link", async () => {
     const site = await import("../src/views/site.js");
-    expect(site.REPO_URL).toBe("");
-    expect(layout({ title: "T", body: html`` })).not.toContain("Source code");
+    expect(site.REPO_URL).toBe("https://github.com/shro-2002/agentdoor");
+    expect(layout({ title: "T", body: html`` })).toContain(
+      '<a href="https://github.com/shro-2002/agentdoor" rel="noopener">Source code</a>',
+    );
+    expect(layout({ title: "T", body: html``, repoUrl: "" })).not.toContain("Source code");
     const page = layout({ title: "T", body: html``, repoUrl: "https://example.test/repo" });
     expect(page).toContain('<a href="https://example.test/repo" rel="noopener">Source code</a>');
   });

@@ -107,7 +107,7 @@ const handlers = {
     save();
     out({ operationId: "op-publish" });
   },
-  "hosting domain list": () => out({ domains: state.domains }),
+  "hosting domain list": () => out(state.domains),
   "api call -X": secretsCall,
 };
 

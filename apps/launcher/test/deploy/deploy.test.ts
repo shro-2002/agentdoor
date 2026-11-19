@@ -64,15 +64,39 @@ describe("I-DEP-1 happy path with a fake gddy", () => {
     expect(Object.keys(state).sort()).toEqual(["appId", "name"]);
   });
 
-  it("shows owner tokens once and stores only their hashes", async () => {
-    const res = await deploy(opts());
-    const token = res.ownerTokens.PUBLISH as string;
+  it("prints each owner token once when its file is created, stores only hashes, and not in the result", async () => {
+    const lines: string[] = [];
+    const res = await deploy(opts({ printLine: (l) => lines.push(l) }));
+    expect(res).not.toHaveProperty("ownerTokens");
+    expect(lines).toHaveLength(2);
+    const pub = lines.find((l) => l.startsWith("PUBLISH owner token (shown once): ")) as string;
+    const token = pub.slice(pub.indexOf(": ") + 2);
     expect(token).toBeTruthy();
     const file = JSON.parse(readFileSync(join(env.root, ".agentdoor/secrets/publish.json"), "utf8")) as Record<string, string>;
     expect(JSON.stringify(file)).not.toContain(token);
     expect(file.OWNER_TOKEN_HASH).toMatch(/^[0-9a-f]{64}$/);
-    const again = await deploy(opts());
-    expect(again.ownerTokens).toEqual({});
+    const again: string[] = [];
+    await deploy(opts({ printLine: (l) => again.push(l) }));
+    expect(again).toEqual([]);
+  });
+
+  it("the token line appears even when a later step fails; tokens stay out of logs and files", async () => {
+    env.writeState({ failOnce: ["hosting deployment publish"] });
+    const lines: string[] = [];
+    await expect(deploy(opts({ printLine: (l) => lines.push(l) }))).rejects.toMatchObject({ code: "INJECTED_FAILURE" });
+    expect(lines.map((l) => l.split(" ")[0]).sort()).toEqual(["PREVIEW", "PUBLISH"]);
+    const tokens = lines.map((l) => l.slice(l.indexOf(": ") + 2));
+    const everything = [JSON.stringify(logs), JSON.stringify(env.readState())];
+    const walk = (d: string): void => {
+      for (const n of readdirSync(d, { withFileTypes: true })) {
+        if (n.name === "node_modules" || n.isSymbolicLink()) continue;
+        const f = join(d, n.name);
+        if (n.isDirectory()) walk(f);
+        else everything.push(readFileSync(f).toString("latin1"));
+      }
+    };
+    walk(env.root);
+    for (const t of tokens) for (const text of everything) expect(text).not.toContain(t);
   });
 });
 
@@ -135,6 +159,31 @@ describe("one app only (I-DEP-8 first half)", () => {
     env.writeState({ subscription: true, domains: [] });
     await expect(deploy(opts())).rejects.toMatchObject({ code: "DOMAIN_NOT_ACTIVE" });
     expect(calls(env).some((c) => c.includes("attach"))).toBe(false);
+  });
+});
+
+describe("domain check (real gddy shape: data[] with hostname + verificationStatus)", () => {
+  it("ACTIVE passes", async () => {
+    await expect(deploy(opts())).resolves.toMatchObject({ steps: { domain: "done" } });
+  });
+
+  it("matches hostname and status case-insensitively", async () => {
+    env.writeState({ domains: [{ hostname: "SHOP.Test", verificationStatus: "active" }] });
+    await expect(deploy(opts())).resolves.toMatchObject({ steps: { domain: "done" } });
+  });
+
+  it("attached but PENDING fails and names hostname and status", async () => {
+    env.writeState({ domains: [{ hostname: "shop.test", verificationStatus: "PENDING" }] });
+    await expect(deploy(opts())).rejects.toMatchObject({
+      code: "DOMAIN_NOT_ACTIVE",
+      message: expect.stringContaining("shop.test"),
+    });
+    await expect(deploy(opts())).rejects.toThrow(/PENDING/);
+  });
+
+  it("absent domain (or only another hostname) fails", async () => {
+    env.writeState({ domains: [{ hostname: "other.test", verificationStatus: "ACTIVE" }] });
+    await expect(deploy(opts())).rejects.toThrow(/shop\.test.*not attached/);
   });
 });
 

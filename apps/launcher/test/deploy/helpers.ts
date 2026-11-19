@@ -49,7 +49,7 @@ export interface FakeState {
   bootScript?: string[][];
   baseMs?: number;
   published: boolean;
-  domains: { domain: string; status: string }[];
+  domains: { hostname: string; verificationStatus: string }[];
   hash: string;
 }
 
@@ -96,7 +96,7 @@ export function makeEnv(): Env {
   const initial: FakeState = {
     apps: [], calls: [], failOnce: [], created: 0, subscription: true, imports: [],
     secrets: { PREVIEW: [], PUBLISH: [] }, secretBodies: [], restarts: [], previewBoot: false,
-    published: false, baseMs: NOW_MS, domains: [{ domain: "shop.test", status: "ACTIVE" }], hash,
+    published: false, baseMs: NOW_MS, domains: [{ hostname: "shop.test", verificationStatus: "ACTIVE" }], hash,
   };
   writeFileSync(statePath, JSON.stringify(initial));
   process.env.FAKE_GDDY_STATE = statePath;

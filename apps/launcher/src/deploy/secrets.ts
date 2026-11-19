@@ -68,7 +68,10 @@ export interface EnsuredSecrets {
 }
 
 /** Creates `.agentdoor/secrets/{preview,publish}.json` (mode 600) when absent; existing files are kept. */
-export function ensureSecretFiles(input: EnsureSecretsInput): EnsuredSecrets {
+export function ensureSecretFiles(
+  input: EnsureSecretsInput,
+  onOwnerToken?: (variant: Variant, token: string) => void,
+): EnsuredSecrets {
   mkdirSync(secretsDir(input.stateDir), { recursive: true, mode: 0o700 });
   const ownerTokens: Partial<Record<Variant, string>> = {};
   const values: string[] = [];
@@ -78,6 +81,8 @@ export function ensureSecretFiles(input: EnsureSecretsInput): EnsuredSecrets {
       const made = generate(input, v);
       writeFileSync(file, JSON.stringify(made.values), { mode: FILE_MODE });
       ownerTokens[v] = made.ownerToken;
+      // Shown the moment the file exists: a later failure must not lose the only plain copy.
+      onOwnerToken?.(v, made.ownerToken);
     }
     chmodSync(file, FILE_MODE);
     const current = secretValues(input.stateDir, v);

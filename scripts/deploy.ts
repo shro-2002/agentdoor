@@ -34,8 +34,7 @@ async function main(): Promise<void> {
     recipientEmail: process.env.CONTACT_FORM_RECIPIENT_EMAIL,
   });
   console.log(JSON.stringify({ event: "deployed", baseUrl: result.baseUrl, policyHash: result.policyHash, steps: result.steps }));
-  // Owner tokens are shown exactly once, on first creation of a secrets file, and are never stored.
-  for (const [variant, token] of Object.entries(result.ownerTokens)) console.log(`${variant} owner token (shown once): ${token}`);
+  // Owner tokens were already printed (once) by the deploy flow when each secrets file was created.
 }
 
 main().catch((err: unknown) => {

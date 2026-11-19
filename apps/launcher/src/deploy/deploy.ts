@@ -37,6 +37,8 @@ export interface DeployOptions {
   sleep?: (ms: number) => Promise<void>;
   nowMs?: () => number;
   log?: DeployLog;
+  /** Receives the one stdout line per new owner token, right when its secrets file is created. Default: stdout. */
+  printLine?: (line: string) => void;
   /** Test seams. */
   lockfile?: PackOptions["lockfile"];
   validatorPath?: string;
@@ -47,8 +49,6 @@ export interface DeployResult {
   policyHash: string;
   baseUrl: string;
   steps: Record<string, "done" | "skipped">;
-  /** Plain owner tokens for secrets files created in this run: show once, never store. */
-  ownerTokens: Partial<Record<Variant, string>>;
 }
 
 type Json = Record<string, unknown>;
@@ -102,7 +102,9 @@ class Deployer {
     await this.checkSubscription();
     const uploaded = await this.upload(packed);
     const baseUrl = publicHost ?? (await this.publishUrl());
-    const secrets = ensureSecretFiles(this.secretsInput(baseUrl));
+    ensureSecretFiles(this.secretsInput(baseUrl), (variant, token) =>
+      (this.o.printLine ?? console.log)(`${variant} owner token (shown once): ${token}`),
+    );
     const changedPreview = await this.secrets("PREVIEW");
     await this.previewVerify(uploaded || changedPreview);
     await this.secrets("PUBLISH");
@@ -110,7 +112,7 @@ class Deployer {
     await this.domainCheck();
     await smoke({ fetchFn: this.fetchFn, baseUrl, policy: gate.policy, policyHash: gate.policyHash, nowMs: (this.o.nowMs ?? Date.now)() });
     this.mark("smoke", "done");
-    return { appId: this.appId, policyHash: gate.policyHash, baseUrl, steps: this.steps, ownerTokens: secrets.ownerTokens };
+    return { appId: this.appId, policyHash: gate.policyHash, baseUrl, steps: this.steps };
   }
 
   private secretsInput(baseUrl: string): EnsureSecretsInput {
@@ -350,9 +352,16 @@ class Deployer {
   private async domainCheck(): Promise<void> {
     if (!this.o.domain) return this.mark("domain", "skipped");
     // Attaching a domain is a once-only owner action (03 §5.5 rule 3); here we only verify it.
-    const domains = arrayAt(await this.call(cmd.listDomains(this.appId)), ["domains", "items"]);
-    const active = domains.some((d) => (d.domain ?? d.name) === this.o.domain && String(d.status).toUpperCase() === "ACTIVE");
-    if (!active) throw new DeployError("DOMAIN_NOT_ACTIVE", "the custom domain is not attached and ACTIVE on the app");
+    // Real shape: {"data":[{"hostname":"agentdoor.shop","verificationStatus":"ACTIVE"}]}.
+    const want = this.o.domain.toLowerCase();
+    const res = await this.call(cmd.listDomains(this.appId));
+    const list = asObj(res).data;
+    const domains = Array.isArray(list) ? list.map(asObj) : [];
+    const found = domains.find((d) => str(d.hostname)?.toLowerCase() === want);
+    if (str(found?.verificationStatus)?.toUpperCase() !== "ACTIVE") {
+      const seen = found ? `status ${str(found.verificationStatus) ?? "unknown"}` : "not attached";
+      throw new DeployError("DOMAIN_NOT_ACTIVE", `domain ${this.o.domain} is not ACTIVE on the app (${seen})`);
+    }
     this.mark("domain", "done");
   }
 }

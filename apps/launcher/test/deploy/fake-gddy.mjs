@@ -83,8 +83,25 @@ const handlers = {
     save();
     out({ ok: true });
   },
-  "hosting log list": () =>
-    out({ logs: state.previewBoot ? [{ message: JSON.stringify({ event: "boot", launched: true, policyHash: state.hash }) }] : [] }),
+  // Real shape: the platform flattens each JSON log line to "[LEVEL] event" and drops all other fields.
+  "hosting log list": () => {
+    state.rows ??= [];
+    const base = state.baseMs ?? Date.now();
+    if (state.previewBoot) {
+      const batch = (state.bootScript ?? [["INFO boot", "INFO listening"]]).shift() ?? [];
+      for (const ev of batch) {
+        const [level, event] = ev.split(" ");
+        state.rows.push({ level, message: `[${level}] ${event}`, timestamp: new Date(base + 1000 * (state.rows.length + 1)).toISOString() });
+      }
+    }
+    const noise = [
+      "> node dist/index.js",
+      "(node:1) Warning: Setting NODE_TLS_REJECT_UNAUTHORIZED to '0' makes TLS connections insecure.",
+      "    at Object.<anonymous> (/app/dist/index.js:1:1)",
+    ].map((message, i) => ({ level: "INFO", message, timestamp: new Date(base + 500 + i).toISOString() }));
+    save();
+    out({ logs: [...state.rows, ...noise] });
+  },
   "hosting deployment publish": () => {
     state.published = true;
     save();

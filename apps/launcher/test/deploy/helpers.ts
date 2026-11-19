@@ -43,6 +43,11 @@ export interface FakeState {
   secretBodies: { variant: string; mode: number; file: string; patch: { op: string; path: string; value: string }[]; contentType: boolean }[];
   restarts: string[];
   previewBoot: boolean;
+  /** Log rows already on the platform (real shape). */
+  rows?: { level: string; message: string; timestamp: string }[];
+  /** Batches of "LEVEL event" appended, one per log list call after a PREVIEW restart. */
+  bootScript?: string[][];
+  baseMs?: number;
   published: boolean;
   domains: { domain: string; status: string }[];
   hash: string;
@@ -91,7 +96,7 @@ export function makeEnv(): Env {
   const initial: FakeState = {
     apps: [], calls: [], failOnce: [], created: 0, subscription: true, imports: [],
     secrets: { PREVIEW: [], PUBLISH: [] }, secretBodies: [], restarts: [], previewBoot: false,
-    published: false, domains: [{ domain: "shop.test", status: "ACTIVE" }], hash,
+    published: false, baseMs: NOW_MS, domains: [{ domain: "shop.test", status: "ACTIVE" }], hash,
   };
   writeFileSync(statePath, JSON.stringify(initial));
   process.env.FAKE_GDDY_STATE = statePath;

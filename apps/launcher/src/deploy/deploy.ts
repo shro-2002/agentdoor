@@ -16,6 +16,11 @@ const STATE_MODE = 0o600;
 const UPLOAD_RETRY_DELAY_MS = 5_000;
 const HTTP_FORBIDDEN = 403;
 const PRIVATE_NAMES = ["QUOTE_SIGNING_PRIVATE_KEY", "SESSION_SECRET", "OWNER_TOKEN_HASH"];
+const CLOCK_SKEW_MS = 5_000;
+const BOOT_OK = "[INFO] boot";
+const NOT_LAUNCHED = "[WARN] boot";
+const LISTENING = "[INFO] listening";
+const LIFECYCLE = new Set([BOOT_OK, NOT_LAUNCHED, "[INFO] config_invalid", "[ERROR] boot_failed"]);
 const DONE = new Set(["COMPLETED", "SUCCEEDED", "SUCCESS", "DONE"]);
 const FAILED = new Set(["FAILED", "ERROR", "CANCELLED"]);
 
@@ -68,6 +73,7 @@ class Deployer {
   private readonly fetchFn: FetchFn;
   private readonly steps: DeployResult["steps"] = {};
   private appId = "";
+  private lastLifecycle: string | undefined;
 
   constructor(private readonly o: DeployOptions) {
     this.stateDir = join(o.repoRoot, ".agentdoor");
@@ -98,7 +104,7 @@ class Deployer {
     const baseUrl = publicHost ?? (await this.publishUrl());
     const secrets = ensureSecretFiles(this.secretsInput(baseUrl));
     const changedPreview = await this.secrets("PREVIEW");
-    await this.previewVerify(gate.policyHash, uploaded || changedPreview);
+    await this.previewVerify(uploaded || changedPreview);
     await this.secrets("PUBLISH");
     await this.publish(gate.policyHash, baseUrl);
     await this.domainCheck();
@@ -190,13 +196,13 @@ class Deployer {
 
   // --- polling -----------------------------------------------------------------------------------
 
-  private async poll<T>(what: string, probe: () => Promise<T | undefined>): Promise<T> {
+  private async poll<T>(what: string, probe: () => Promise<T | undefined>, detail?: () => string): Promise<T> {
     let waited = 0;
     let delay = POLL_START_MS;
     for (;;) {
       const got = await probe();
       if (got !== undefined) return got;
-      if (waited >= POLL_MAX_MS) throw new DeployError("POLL_TIMEOUT", `${what} did not finish in time`);
+      if (waited >= POLL_MAX_MS) throw new DeployError("POLL_TIMEOUT", `${what} did not finish in time${detail?.() ?? ""}`);
       await this.sleep(delay);
       waited += delay;
       delay = Math.min(delay * 2, POLL_CAP_MS);
@@ -282,19 +288,47 @@ class Deployer {
 
   // --- preview ------------------------------------------------------------------------------------
 
-  private async bootSeen(hash: string): Promise<boolean> {
-    const res = await this.call(cmd.logs(this.appId, "PREVIEW"));
-    const lines = arrayAt(res, ["logs", "items", "lines"]);
-    const texts = lines.length > 0 ? lines.map((l) => JSON.stringify(l)) : [JSON.stringify(asObj(res).data ?? "")];
-    const unescaped = texts.map((t) => t.replaceAll('\\"', '"'));
-    return unescaped.some((t) => t.includes('"event":"boot"') && t.includes('"launched":true') && t.includes(`"policyHash":"${hash}"`));
+  /**
+   * The platform flattens every JSON log line the shop writes into "[LEVEL] <event>" and drops all
+   * other fields, so the logs can only tell us WHICH lifecycle event happened, not the policy hash.
+   * The hash is verified from the public /healthz after publish (publish() and smoke() both compare
+   * the served policyHash with the expected one and fail the deploy on a mismatch).
+   * Only rows later than `since` count (undefined = no filter). Never logs or returns a message body.
+   */
+  private async bootSeen(since: number | undefined): Promise<boolean> {
+    const rows = arrayAt(await this.call(cmd.logs(this.appId, "PREVIEW")), ["logs", "items", "lines"])
+      .map((r) => ({ message: str(r.message) ?? "", at: Date.parse(str(r.timestamp) ?? "") }))
+      .filter((r) => LIFECYCLE.has(r.message) || r.message === LISTENING)
+      .filter((r) => since === undefined || (Number.isFinite(r.at) && r.at > since));
+    // Stable sort by timestamp; ties keep platform order.
+    rows.sort((x, y) => (Number.isFinite(x.at) && Number.isFinite(y.at) ? x.at - y.at : 0));
+    let last = -1;
+    rows.forEach((r, i) => {
+      if (LIFECYCLE.has(r.message)) last = i;
+    });
+    const event = last < 0 ? undefined : (rows[last] as { message: string }).message;
+    this.lastLifecycle = event;
+    if (event === NOT_LAUNCHED) {
+      throw new DeployError("GATE_BLOCKED", 'preview booted "Not launched": the shop refused the bundle, nothing was published', 409);
+    }
+    if (event !== BOOT_OK) return false;
+    return rows.slice(last + 1).some((r) => r.message === LISTENING);
   }
 
   /** Upload + secrets only reach the running preview after a restart; then wait for the boot line. */
-  private async previewVerify(hash: string, changed: boolean): Promise<void> {
-    if (!changed && (await this.bootSeen(hash))) return this.mark("preview", "skipped");
-    if (changed) await this.call(cmd.restart(this.appId, "PREVIEW"));
-    await this.poll("preview boot", async () => ((await this.bootSeen(hash)) ? true : undefined));
+  private async previewVerify(changed: boolean): Promise<void> {
+    this.lastLifecycle = undefined;
+    if (!changed && (await this.bootSeen(undefined))) return this.mark("preview", "skipped");
+    let since: number | undefined;
+    if (changed) {
+      since = (this.o.nowMs ?? Date.now)() - CLOCK_SKEW_MS;
+      await this.call(cmd.restart(this.appId, "PREVIEW"));
+    }
+    await this.poll(
+      "preview boot",
+      async () => ((await this.bootSeen(since)) ? true : undefined),
+      () => (this.lastLifecycle ? `; last lifecycle event seen: ${this.lastLifecycle}` : "; no lifecycle event seen since the restart"),
+    );
     this.mark("preview", "done");
   }
 

@@ -275,3 +275,87 @@ describe("upload blocked by the platform filter (403)", () => {
     }
   });
 });
+
+describe("preview boot from flattened platform logs", () => {
+  const stage = () => calls(env);
+  const polls = (): number => stage().filter((c) => c === "hosting log list").length;
+
+  it("success: latest lifecycle row is [INFO] boot and a listening row follows", async () => {
+    const res = await deploy(opts());
+    expect(res.steps.preview).toBe("done");
+  });
+
+  it("[WARN] boot (Not launched) stops with GATE_BLOCKED before publish", async () => {
+    env.writeState({ bootScript: [["WARN boot", "INFO listening"]] });
+    const err = await deploy(opts()).catch((e: unknown) => e);
+    expect(err).toMatchObject({ code: "GATE_BLOCKED", status: 409 });
+    expect(stage()).not.toContain("hosting deployment publish");
+    expect(stage().filter((c) => c === "api call -X")).toHaveLength(1); // preview secrets only
+  });
+
+  it("boot without a listening row keeps polling until it appears", async () => {
+    env.writeState({ bootScript: [["INFO boot"], ["INFO listening"]] });
+    const res = await deploy(opts());
+    expect(res.steps.preview).toBe("done");
+    expect(polls()).toBeGreaterThanOrEqual(2);
+  });
+
+  it("config_invalid then boot keeps polling, then succeeds", async () => {
+    env.writeState({ bootScript: [["INFO config_invalid"], ["ERROR boot_failed"], ["INFO boot", "INFO listening"]] });
+    const res = await deploy(opts());
+    expect(res.steps.publish).toBe("done");
+    expect(polls()).toBeGreaterThanOrEqual(3);
+  });
+
+  it("config_invalid forever: POLL_TIMEOUT names the last lifecycle event only", async () => {
+    env.writeState({ bootScript: Array.from({ length: 200 }, () => ["INFO config_invalid"]) });
+    const err = (await deploy(opts()).catch((e: unknown) => e)) as DeployError;
+    expect(err).toMatchObject({ code: "POLL_TIMEOUT" });
+    expect(err.message).toContain("[INFO] config_invalid");
+    expect(stage()).not.toContain("hosting deployment publish");
+  });
+
+  it("a boot older than the restart (minus 5 s skew) is ignored", async () => {
+    const old = (ms: number) => new Date(NOW_MS - ms).toISOString();
+    env.writeState({
+      rows: [
+        { level: "INFO", message: "[INFO] boot", timestamp: old(60_000) },
+        { level: "INFO", message: "[INFO] listening", timestamp: old(59_000) },
+      ],
+      bootScript: [],
+    });
+    const err = (await deploy(opts()).catch((e: unknown) => e)) as DeployError;
+    expect(err).toMatchObject({ code: "POLL_TIMEOUT" });
+    expect(err.message).toContain("no lifecycle event seen");
+    expect(stage()).not.toContain("hosting deployment publish");
+  });
+
+  it("a boot inside the 5 s skew window still counts", async () => {
+    env.writeState({
+      rows: [
+        { level: "INFO", message: "[INFO] boot", timestamp: new Date(NOW_MS - 4_000).toISOString() },
+        { level: "INFO", message: "[INFO] listening", timestamp: new Date(NOW_MS - 3_000).toISOString() },
+      ],
+      bootScript: [],
+    });
+    expect((await deploy(opts())).steps.preview).toBe("done");
+  });
+
+  it("never logs log message bodies, noise lines or secrets", async () => {
+    env.writeState({ bootScript: [["INFO config_invalid"], ["INFO boot", "INFO listening"]] });
+    await deploy(opts());
+    const text = JSON.stringify(logs);
+    for (const leak of ["node dist/index.js", "NODE_TLS", "Object.<anonymous>", "[INFO] boot", "[INFO] listening", "config_invalid"]) {
+      expect(text, leak).not.toContain(leak);
+    }
+    const priv = readFileSync(join(env.root, ".agentdoor/secrets/quote-signing-private.key"), "utf8").trim();
+    expect(text).not.toContain(priv);
+  });
+
+  it("the timeout error carries no message body or noise", async () => {
+    env.writeState({ bootScript: Array.from({ length: 200 }, () => ["ERROR boot_failed"]) });
+    const err = (await deploy(opts()).catch((e: unknown) => e)) as DeployError;
+    expect(err.message).toContain("[ERROR] boot_failed");
+    expect(err.message).not.toContain("node dist");
+  });
+});

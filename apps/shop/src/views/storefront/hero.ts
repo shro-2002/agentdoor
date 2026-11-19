@@ -3,6 +3,7 @@ import { html, icon, type SafeHtml } from "@agentdoor/ui";
 import { spanOfHours } from "../format.js";
 import { sprig } from "./ornaments.js";
 import { HERO_PHOTO, photoImg } from "./photos.js";
+import { menuWords, ownerName, sellsCakes } from "./words.js";
 
 /** Facts for the hero chips, all read from the policy so a changed rule changes the page. */
 function chips(policy: BusinessPolicy): string[] {
@@ -20,10 +21,10 @@ export function hero(policy: BusinessPolicy): SafeHtml {
     <div class="wrap hero__grid">
       <div class="hero__text">
         <p class="eyebrow">${business.city} · home-baked to order</p>
-        <h1 id="hero-h" class="hero__title">Home-baked cakes for the <em>moments</em> that matter</h1>
-        <p class="hero__lead">Small-batch cakes, brownies and cookie boxes, baked to order in a home kitchen in ${business.city}. Choose your day and ${business.ownerFirstName} will quote you an exact price.</p>
+        <h1 id="hero-h" class="hero__title">Home-baked ${sellsCakes(policy) ? "cakes" : "treats"} for the <em>moments</em> that matter</h1>
+        <p class="hero__lead">Small-batch ${menuWords(policy)}, baked to order in a home kitchen in ${business.city}. Choose your day and ${ownerName(policy)} will quote you an exact price.</p>
         <p class="hero__cta">
-          <a class="btn btn--primary btn--lg" href="/order">Order a cake <span aria-hidden="true">→</span></a>
+          <a class="btn btn--primary btn--lg" href="/order">${sellsCakes(policy) ? "Order a cake" : "Order now"} <span aria-hidden="true">→</span></a>
           <a class="btn btn--quiet btn--lg" href="#menu">See what's baking</a>
         </p>
         <ul class="hero__chips" aria-label="Good to know">${chips(policy).map((c) => html`<li>${icon("check")}<span>${c}</span></li>`)}</ul>

@@ -3,6 +3,7 @@ import { html, type SafeHtml } from "@agentdoor/ui";
 import { spanOfHours } from "../format.js";
 import { sprig, wave } from "./ornaments.js";
 import { KITCHEN_PHOTOS, OCCASION_PHOTOS, photoImg } from "./photos.js";
+import { ownerName } from "./words.js";
 
 /** Section 4: a warm, generic introduction. It says only what the policy backs up: home kitchen, to order, small batches. */
 export function kitchen(policy: BusinessPolicy): SafeHtml {
@@ -23,7 +24,7 @@ export function kitchen(policy: BusinessPolicy): SafeHtml {
         <ul class="kitchen__points">
           <li>Baked to order, never in advance</li>
           <li>Small batches, a limited number of orders a day</li>
-          <li>${business.ownerFirstName} confirms every order by hand</li>
+          <li>${ownerName(policy, true)} confirms every order by hand</li>
         </ul>
       </div>
     </div>
@@ -61,7 +62,7 @@ export function occasions(): SafeHtml {
 
 /** Section 6: custom requests follow the policy: welcome (after the owner agrees) or menu only. */
 export function custom(policy: BusinessPolicy): SafeHtml {
-  const owner = policy.business.ownerFirstName;
+  const owner = ownerName(policy);
   const open = policy.orderRules.customRequests !== "REFUSE";
   return html`<section class="custom" aria-labelledby="custom-h">
     <div class="wrap custom__card">

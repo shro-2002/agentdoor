@@ -3,6 +3,7 @@ import { html, icon, type SafeHtml } from "@agentdoor/ui";
 import { DIETARY, UNIT_WORD, inr, spanOfHours } from "../format.js";
 import { wave } from "./ornaments.js";
 import { photoImg, productPhotoFor } from "./photos.js";
+import { ownerName } from "./words.js";
 
 type Item = BusinessPolicy["catalog"][number];
 
@@ -53,7 +54,7 @@ function card(policy: BusinessPolicy, item: Item): SafeHtml {
 
 /** Sections 2 and 3: the collection heading, then one photo-led card per product (the first is featured on wide screens). */
 export function collection(policy: BusinessPolicy): SafeHtml {
-  const owner = policy.business.ownerFirstName;
+  const owner = ownerName(policy);
   return html`<section class="collection" id="menu" aria-labelledby="menu-h">
     <div class="wrap">
       <header class="section-head">

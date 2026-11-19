@@ -2,15 +2,16 @@ import type { BusinessPolicy } from "@agentdoor/core";
 import { html, icon, type SafeHtml } from "@agentdoor/ui";
 import { WEEKDAYS, areaFee, inr, listWords, rushFee, spanOfHours } from "../format.js";
 import { wave } from "./ornaments.js";
+import { ownerName } from "./words.js";
 
 /** Section 7: the real flow in four steps: choose, exact quote, place, owner confirms. */
 export function howItWorks(policy: BusinessPolicy): SafeHtml {
-  const owner = policy.business.ownerFirstName;
+  const owner = ownerName(policy);
   const steps = [
     { t: "Choose your bakes", d: "Pick what you would like and the day you need it. You can start from any bake above." },
     { t: "Get an exact quote", d: `Your price appears straight away and is held for ${policy.orderRules.quoteValidityMinutes} minutes. Prices are fixed, with no haggling.` },
     { t: "Place your order", d: "Add your name and phone number and send your request. Nothing is charged online." },
-    { t: `${owner} confirms`, d: `${owner} confirms your order by hand, and you get a private link to follow its status.` },
+    { t: `${ownerName(policy, true)} confirms`, d: `${ownerName(policy, true)} confirms your order by hand, and you get a private link to follow its status.` },
   ];
   return html`<section class="how" id="how" aria-labelledby="how-h">
     <div class="wrap">
@@ -31,7 +32,7 @@ export function delivery(policy: BusinessPolicy): SafeHtml {
   const { pickup, delivery: d } = policy.fulfilment;
   const { schedule, rush, orderRules } = policy;
   const closed = closedDays(policy);
-  const owner = policy.business.ownerFirstName;
+  const owner = ownerName(policy);
   return html`<section class="delivery" id="delivery" aria-labelledby="delivery-h">
     <div class="wrap delivery__grid">
       <div>
@@ -63,7 +64,7 @@ interface Faq {
 /** Answers use only what the policy states; a question with nothing to answer is left out. */
 function faqs(policy: BusinessPolicy): Faq[] {
   const { schedule, cancellation, orderRules, fulfilment } = policy;
-  const owner = policy.business.ownerFirstName;
+  const owner = ownerName(policy);
   const eggless = policy.catalog.filter((i) => i.dietary.includes("eggless")).map((i) => i.name.en);
   const areas = fulfilment.delivery.enabled ? fulfilment.delivery.areas.map((a) => `${a.name} (${areaFee(a.feePaise).toLowerCase()})`) : [];
   const out: Faq[] = [

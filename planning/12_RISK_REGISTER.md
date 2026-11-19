@@ -9,8 +9,7 @@ Likelihood/impact: H/M/L. Every CRITICAL/HIGH risk has a mitigation and a test o
 | K3 | MCP blocked/buffered by GoDaddy CDN | M | H | Stateless JSON transport; T01 spike first | I-MCP via curl + connector in T01 | Fallback REST + local MCP shim (`02` B3) |
 | K4 | Managed MySQL missing or behaves differently | L | H | Contract C12 confirms; spike verifies | `/spike/db` | In-process repo + snapshot; document |
 | K5 | Mail gateway doesn't reach Titan mailbox | M | H (mandatory) | Use vended helper exactly; recipient via env | `/spike/mail` | Office hours; keep DB copy; show external test email |
-| K6 | Purchases exceed $40 credit (tax, Titan yearly-only) | M | H | Plan worst case $35.23; checkout total reviewed before each approval; free mailbox trial preferred | GODADDY_LEDGER | Drop Titan yearly → trial; cheaper TLD; ask organizers; never pay out of pocket without your decision |
-| K6b | **Credit expires 23 Nov 2026** before purchases are made | L | H | Purchases happen tonight in T00 (R0-3) | GODADDY_LEDGER | — |
+| K6b | **Credit expires soon 2026** before purchases are made | L | H | Purchases happen tonight in T00 (R0-3) | GODADDY_LEDGER | — |
 | K6c | Auto-renewals charge later (domain renews $59.99) | L | M | Turn off auto-renew after purchase; no card on file | Account UI | — |
 | K6d | Managed MySQL not auto-provisioned / low connection limit | M | H | Spike checks `DB_*` and `max_connections`; pool of 5 | T01 | Enable in dashboard; ask office hours |
 | K20 | Judges never see the launcher (public URL = storefront only) | H | H | `/try` replay + ribbon + mandatory video (R0-1) | E2E-5 | — |

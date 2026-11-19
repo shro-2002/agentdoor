@@ -9,7 +9,7 @@ Keep this under ~150 lines. Newest entries on top within each section. Each task
 - Deadline: Fri 20 Nov 2026. Exact submission time: **UNCONFIRMED**. Assume 18:00 IST.
 - Reviews remaining: **R2** (after T06) and **R4** (before submit). No further architecture reviews unless a fatal feasibility blocker appears.
 
-## Platform facts (public-safe; account details live in `private/ACCOUNT_FACTS.md`)
+## Platform facts (public-safe; account details live in private account notes)
 | Item | Value |
 |---|---|
 | Submission deadline (exact) | UNCONFIRMED |
@@ -38,7 +38,6 @@ Keep this under ~150 lines. Newest entries on top within each section. Each task
 - 2026-11-19 (T01): `app.set('trust proxy', 1)`; rate-limit key is `req.ip` (rightmost XFF), never the leftmost entry (client-controlled). Every build must serve `GET /` with 200 for the publish health probe. Secrets use `application/json-patch+json`.
 - 2026-11-18 (revision 2): `/try` replay mandatory with three provenance badges (RECORDED · Claude / LIVE · deterministic / RECORDED · deployment evidence), embedded video, persistent nav. Optional `/try/live` (T14) only after R1–R20 pass and the ledger is ≤ $75: access code + hard $5 app budget. Trusted proxy topology measured in T01; separate buckets mcp-read / quote-rest / order-create / contact / owner-auth / try. Implementation sessions explicitly read CLAUDE.md; human cost checkpoints. Secrets only in the `updateSecrets` JSON body (`gddy api call --file`), PREVIEW and PUBLISH separately, never argv. Two-way provenance coverage gate. Global lock order `quote_redemptions → capacity_ledger → orders → audit_events`, bounded retry with ROLLBACK. Ledgers and account facts moved to gitignored `private/`. No AI-assistance disclosure file is committed to the repo (your decision, 2026-11-18).
 - 2026-11-18: Hosting plan = **Economy 1-month ($4.99)**, the cheapest plan with a publish slot + managed MySQL. Exactly one app (`agentdoor-shop`) for the whole hackathon; all deploys reuse it. Free PREVIEW for development checks.
-- 2026-11-18: Separate GoDaddy budget, cap $40 (`private/GODADDY_LEDGER.md`); every purchase needs explicit approval; mailbox free trial preferred over Titan yearly ($23.88).
 - 2026-11-18: Deployment acceptance now requires live public storefront, working MCP, DB persistence across restart + redeploy, successful same-app redeploy (I-DEP-4..7).
 - 2026-11-18: Domain + mailbox + contact form are **in scope** (organizer-mandatory, deck p.6). Supersedes earlier "Out: custom domain, Email API".
 - 2026-11-18: Email via GoDaddy loopback gateway helper only (contract C11/C13); deck SMTP tip ignored for Node hosting.
@@ -116,7 +115,7 @@ Summary: 18 ticked, 0 live-check, 1 n/a (SEC-18). Nothing needed a live command.
   (2) Deploy evidence: every `step` log event has `ms` (injectable clock); a successful run writes `.agentdoor/deploy-log.json` `[{step,ms,ok}]` mode 600 (failed run leaves the old file); 3 new fake-gddy tests.
   Open: `scripts/check-secrets.sh` needed approval in headless mode, so it was not run; docs/screens not regenerated (restored), so shop/S8 screenshots lack the note.
 
-- T01 — 2026-11-18 — **BLOCKED (partial)** — no Economy subscription (`totalAvailableSlots: 0`), no domain/mailbox: T00 purchases not done, and I never purchase. Done: `spike/` built and verified locally (healthz/ip/env/db/mail/sse/MCP stateless), `scripts/set-secrets.mjs`, the single app `agentdoor-shop` created (id in `.agentdoor/deploy.json`), spike uploaded to PREVIEW (import ~10 s). Details in `spike/RESULTS.md`. Next: you buy Economy (T00), then resume at `subscription attach`. Also needs `CONTACT_FORM_RECIPIENT_EMAIL` in private/ACCOUNT_FACTS.md (not recorded yet).
+- T01 — 2026-11-18 — **BLOCKED (partial)** — no Economy subscription (`totalAvailableSlots: 0`), no domain/mailbox: T00 purchases not done, and I never purchase. Done: `spike/` built and verified locally (healthz/ip/env/db/mail/sse/MCP stateless), `scripts/set-secrets.mjs`, the single app `agentdoor-shop` created (id in `.agentdoor/deploy.json`), spike uploaded to PREVIEW (import ~10 s). Details in `spike/RESULTS.md`. Next: you buy Economy (T00), then resume at `subscription attach`. Also needs `CONTACT_FORM_RECIPIENT_EMAIL` in private account notes (not recorded yet).
 
 ## Review findings (R0–R4)
 <!-- ID — gate — severity — finding — fix task — status -->

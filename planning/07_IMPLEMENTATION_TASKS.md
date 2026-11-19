@@ -37,8 +37,8 @@ T02 scaffold+schemas+hash ─▶ T03 engine ─┬─▶ T05 shop data ─▶ T0
 ## 3. Tasks
 
 ### T00 — Human setup and purchases TONIGHT (no Claude API cost) (R0-3)
-- **Objective:** unblock the public URL, domain and mailbox now. They're mandatory whatever the spike finds, and DNS/TLS/DB discovery needs hours of lead time. The credit expires 23 Nov.
-- **Deps:** none. **Owner:** you. Approvals and spend log: `private/GODADDY_LEDGER.md`.
+- **Objective:** unblock the public URL, domain and mailbox now. They're mandatory whatever the spike finds, and DNS/TLS/DB discovery needs hours of lead time. The credit expires soon.
+- **Deps:** none. **Owner:** you. Approvals and spend log: the private purchase log.
 - **Steps:** (1) Check the HackerEarth dashboard for the exact submission time; record it in STATUS. (2) Claude Console: confirm the $100 balance; create workspace `agentdoor`, keys `agentdoor-dev` and `agentdoor-runtime`; no payment method; $90 workspace spend limit if offered. (3) On **godaddy.com** (the organizers' instructed path; the INR cart is authoritative, CLI USD prices are indicative): add Economy Node.js hosting **1-month** + domain (`agentdoor.shop` default) → check the cart total incl. GST is fully covered by the in-store credit → **you approve and place the order**. (4) Mailbox: Titan Pro Light, 1-month term if the site offers it (the deck says it does), else the free trial only if no card is required, else 1-year $23.88 if the remaining credit covers it. Create the mailbox (`gddy email check-eligibility` → you run `gddy email create`), send a Gmail test email, confirm arrival. (5) Turn off auto-renew. (6) Fill `.env.local` (gitignored). (7) In a plain shell, `env | grep ANTHROPIC` prints nothing.
 - **Acceptance:** STATUS lists submission time, Console balance, spend-limit availability, subscription id, domain, mailbox; GODADDY_LEDGER spend ≤ $40 with order ids.
 - **Time:** 45 min. **Recovery:** cart total > credit → drop the mailbox upgrade (try the trial), or pick a cheaper TLD; ask at office hours (19 Nov 16:00). Never pay with a card without your decision.
@@ -163,5 +163,5 @@ T02 scaffold+schemas+hash ─▶ T03 engine ─┬─▶ T05 shop data ─▶ T0
 
 - One task per fresh Claude Code session; the prompt explicitly loads CLAUDE.md and names the exact `planning/` sections to read (never "read the whole repo").
 - `CLAUDE.md` stays ≤120 lines; contracts live in `planning/04`, so the agent reads only the sections cited.
-- End of task: run tests, commit (`feat(scope): …`), append to `STATUS.md` (≤10 lines: done, decisions, open issues, next), add a `private/COST_LEDGER.md` row with `/cost` output. Then `/clear` or exit.
+- End of task: run tests, commit (`feat(scope): …`), append to `STATUS.md` (≤10 lines: done, decisions, open issues, next), add a the private usage log row with `/cost` output. Then `/clear` or exit.
 - Two lanes never edit the same directories: lane A owns `apps/shop`, `spike`, `packages/core`, `e2e`; lane B owns `apps/launcher`, `packages/ui`. Run lane B in a separate git worktree (`git worktree add ../agentdoor-b`) and merge at milestones. Core changes requested by lane B are posted in STATUS as a request.

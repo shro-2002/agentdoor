@@ -80,7 +80,7 @@ Payments; ANS registration; multiple verticals; multi-tenancy; hosted launcher; 
 | ID | Assumption | Verified by |
 |---|---|---|
 | A1 | Submission closes 20 Nov 2026; exact time is "to be confirmed" (deck p.5). **Plan to submit by 20 Nov 18:00 IST.** | User checks HackerEarth dashboard / office hours 19 Nov 16:00 |
-| A2 | $40 GoDaddy credit (email 18 Nov) covers Economy 1-month + Titan Pro Light 1-month + one domain | T00 checkout preview shows ₹0/$0 |
+| A2 | hosting credit (email 18 Nov) covers Economy 1-month + Titan Pro Light 1-month + one domain | T00 checkout preview shows ₹0/$0 |
 | A3 | Claude custom connector reaches an MCP endpoint behind GoDaddy's CDN | T01 spike |
 | A4 | Managed MySQL env vars `DB_*` are injected on the published app | T01 spike (contract C12 says yes) |
 | A5 | Mail gateway `127.0.0.1:2525` delivers to our Titan mailbox | T01 spike (contract C13 says yes) |

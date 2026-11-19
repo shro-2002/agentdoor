@@ -12,9 +12,7 @@ Verified 2026-11-18 18:30 IST. **C** = confirmed from a primary source. **S** = 
 | Submissions close 20 Nov 2026; **exact time "to be confirmed"** | C | Deck p.5; "2 days left" email 18 Nov 06:06 UTC |
 | Rubric: Impact 35, Demo 35, Tech usage 15, Execution 15 | C | Deck p.10 |
 | Top 10 announced 30 Nov; Pune finale 11 Dec | C | Deck p.5, p.11 |
-| Node.js participants received **$40 GoDaddy credit** (domains, hosting, email) | C | Organizer email 18 Nov |
 | Recommended purchases: Economy plan 1-month, Titan Pro Light 1-month: "should come to $0" | C (deck claim) | Deck p.7–9. The CLI catalog shows Titan Pro Light as **1-year only ($23.88)**, see §3.1 |
-| Claude credits: $100; claim link open until **20 Nov 23:59 IST**; credits usable **90 days** after claim; new accounts wait 24 h | C | Deck p.4; Anthropic email 13 Nov |
 | Office hours daily 16:00–17:00 IST until 20 Nov | C | Organizer emails |
 | Video not listed as mandatory | C (absence) | Deck p.6, p.12. We still make one (demo = 35%) |
 
@@ -57,7 +55,6 @@ Verified 2026-11-18 18:30 IST. **C** = confirmed from a primary source. **S** = 
 
 | Fact | Status | Source |
 |---|---|---|
-| Organizer in-store credit **$40.00**, non-recurring, expires 23 Nov 2026 | C | Organizer email; account billing page |
 | **No hosting subscription exists**; `totalAvailableSlots: 0`. The credit did not activate a plan, so **checkout is required** | C | `gddy hosting subscription list --hosting-product=WEB_HOSTING` |
 | No apps, domains or mailboxes yet | C | `gddy hosting app list --app-type NODEJS`, `domain list`, `email list` |
 | Node.js plans: Economy $4.99/mo (1 app), Deluxe $7.99 (10), Ultimate $12.99 (25); 1-month terms, auto-renew | C | `gddy shopping catalog search --category webHosting` |
@@ -71,7 +68,7 @@ Verified 2026-11-18 18:30 IST. **C** = confirmed from a primary source. **S** = 
 | `gddy hosting secret create/sync` take values as argv (not used). Official `PATCH /v1/hosting/apps/{appId}/secrets` (`updateSecrets`) takes an RFC 6902 JSON Patch **body**, `variant` as a query param (default PREVIEW), ≤50 ops, values ≤8 KB, never returned. `gddy api call -X PATCH updateSecrets --param appId=… --param variant=… --file body.json` sends it with keychain OAuth | C | `gddy hosting secret sync --help`; `gddy api operation get updateSecrets`; `gddy api call --help` |
 | `gddy` credentials stored in OS keychain; config `~/Library/Application Support/gddy/config.toml` (outside repo) | C | `gddy config path`, `gddy guide auth` |
 
-GoDaddy spending follows `private/GODADDY_LEDGER.md` (separate $40 cap). It is independent of the Claude budget.
+GoDaddy spending follows the private purchase log . It is independent of the Claude budget.
 
 ### 3.2 Managed MySQL design consequences
 
@@ -106,15 +103,14 @@ No GPL/AGPL. Zip is made with the system `zip` binary through `execFile`, so no 
 | # | Blocker | Severity | Cheapest experiment | Owner | Fallback if it fails |
 |---|---|---|---|---|---|
 | B1 | Exact submission time unknown | HIGH | Look at the HackerEarth challenge dashboard now; ask at office hours 19 Nov 16:00 | User | Assume 20 Nov 18:00 IST; feature freeze 20 Nov 10:00 |
-| B2 | No hosting plan; credit expires 23 Nov | HIGH (blocks public URL) | **Buy Economy 1-month + domain tonight (T00, R0-3)** on godaddy.com with the in-store credit, after you approve the INR cart total. Waiting for a spike gains nothing because both are mandatory | User | — |
-| B2b | Checkout tax pushes total over $40 | MED | Checkout preview shows the final total before `complete` | User | Drop Titan yearly and use the free trial, or a cheaper TLD |
+| B2 | No hosting plan; credit expires soon | HIGH (blocks public URL) | **Buy Economy 1-month + domain tonight (T00, R0-3)** on godaddy.com with the in-store credit, after you approve the INR cart total. Waiting for a spike gains nothing because both are mandatory | User | — |
+| B2b | Checkout tax pushes the total over the credit | MED | Checkout preview shows the final total before `complete` | User | Drop Titan yearly and use the free trial, or a cheaper TLD |
 | B2c | Mailbox option: free trial vs Titan $23.88 | MED | `gddy email check-eligibility` after the domain exists (read-only) | Agent | Titan Pro Light 1 yr (P3b) |
 | B3 | MCP through GoDaddy CDN to Claude connector | HIGH | T01: 40-line Express + MCP stateless JSON app; `curl` initialize + tools/list; add as Claude.ai custom connector | Agent + user | Use REST `/api/quote` + `/api/orders` with an OpenAPI doc, plus a local MCP shim (`npx agentdoor-mcp --url`) for the demo. The concept survives |
 | B4 | MySQL env injection + transactions on published app | HIGH | T01: `/spike/db` endpoint runs `SELECT 1` and one `FOR UPDATE` txn | Agent | External DB is impossible (egress). Use a single-process in-memory store plus a JSON snapshot written to `/public/assets/` (S). Document as a known limit |
 | B5 | Mail gateway delivery to Titan mailbox | HIGH (mandatory R18) | T01: `/spike/mail` sends via `sendEmail()` to `CONTACT_FORM_RECIPIENT_EMAIL` | Agent + user checks inbox | Ask office hours; contact form still stores messages in DB; show mailbox test email separately |
 | B6 | Secrets reach PUBLISH after publish | MED | T01: create secret on PREVIEW, publish, read `/spike/env` (prints secret names only, never values) | Agent | Re-publish; bake non-secret config into bundle |
 | B7 | Domain attach + HTTPS time | MED | T01 attaches domain right after first publish; poll `verificationStatus` | Agent | Submit the platform PREFIX URL as a temporary live link; keep polling |
-| B8 | Claude credits claimed and API key works | HIGH | T00: Console shows $100 balance; one 10-token call with Haiku | User | Email `hackathon+godaddy-...@anthropic.com` (they replied within 8 h before) |
 | B9 | Real entrepreneur input | MED (impact 35%) | Message 1–2 home bakers (friends/family/Instagram), ask for 3 real order chats and their rules; get consent to quote | User | Label persona "illustrative, based on common home-bakery practices"; never claim a real user |
 | B10 | Time: ~24 effective build hours remain | CRITICAL | Follow critical path in `00`; two parallel Claude Code lanes | User | Cut list in `07` §4 |
 

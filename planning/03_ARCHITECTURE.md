@@ -40,7 +40,7 @@ Contracts (schemas, endpoints, tables) are in `04`. Agent/prompt design is in `0
 
 ```
 /                         package.json (workspaces), tsconfig.base.json, .npmrc (save-exact=true), vitest.workspace.ts
-  CLAUDE.md TASKS.md STATUS.md private/COST_LEDGER.md
+  CLAUDE.md TASKS.md STATUS.md the private usage log
   planning/               (this package)
   packages/core/src/
     schema/               policy.ts quote.ts order.ts launch.ts common.ts   (Zod; single source of types)
@@ -214,5 +214,5 @@ Threat model, tests and controls are in `08` §3. Architecture-level invariants:
 ## 8. Observability and cost tracking
 
 - Shop: JSON log line per request (`requestId, route, status, ms`), per order event, per refusal code. `GET /healthz` gives `{ok, launched, policyHash, version}`.
-- Launcher: `.agentdoor/usage.jsonl` per Claude call: `{ts, flow, model, input, output, cache_read, cache_write, usd}`. A header widget shows session spend; `npm run cost` totals it. These numbers go into `private/COST_LEDGER.md` runtime rows.
+- Launcher: `.agentdoor/usage.jsonl` per Claude call: `{ts, flow, model, input, output, cache_read, cache_write, usd}`. A header widget shows session spend; `npm run cost` totals it. These numbers go into the private usage log runtime rows.
 - Deploy: `.agentdoor/deploy-log.jsonl` with each `gddy` call, duration and result. The deploy progress screen reads it.

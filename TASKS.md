@@ -4,7 +4,7 @@ Details: `planning/07_IMPLEMENTATION_TASKS.md`. Status: `todo` · `doing` · `do
 
 | ID | Task | Lane | Deps | Model / effort | Exp $ | Cap $ | Time | Target window (IST) | Status |
 |---|---|---|---|---|---|---|---|---|---|
-| T00 | Human: submission time, Console keys/limits; **approve + buy Economy 1-mo, domain, mailbox tonight** (GODADDY_LEDGER) | Human | — | — | 0 | 0 | 45m | **Wed 19:45** (credit expires 23 Nov) | todo |
+| T00 | Human: submission time, API keys; **approve + buy Economy 1-mo, domain, mailbox tonight** | Human | — | — | 0 | 0 | 45m | **Wed 19:45** | todo |
 | T01 | Spike: single app `agentdoor-shop`, preview → publish, MCP via CDN, MySQL (+`max_connections`), mail, proxy hops, restart/redeploy | A | T00 | S / medium | 3.00 | 4.00 | 2h | Wed 21:00 | todo |
 | T02 | Monorepo scaffold (all deps up front, `packages/ui` stub), Zod domain + wire schemas, canonical hash, compose, secret scan | A | — | S / medium | 3.00 | 4.00 | 60m | Wed 19:45 | todo |
 | T03 | Deterministic engine, probes, gap linter, property tests | A | T02 | S / high | 4.00 | 5.00 | 90m | Wed 23:00 | todo |
@@ -22,7 +22,6 @@ Details: `planning/07_IMPLEMENTATION_TASKS.md`. Status: `todo` · `doing` · `do
 | T14 | OPTIONAL `/try/live`: access code, hard $5 app budget (only if R1–R20 pass and ledger ≤ $75) | A | T13 | S / medium | (2.00) | (3.00) | 90m | after submit-ready | optional |
 | | **Totals** | | | | **63.00** | **82.50** | | | |
 
-GoDaddy spend is tracked separately in `private/GODADDY_LEDGER.md` (cap $40; every purchase needs your explicit approval).
 
 Each task runs in a fresh Claude Code session (`claude-sonnet-5-5`, effort high; medium for T01, T02, T04, T09–T11, T13, T14). Totals exclude the optional T14.
 

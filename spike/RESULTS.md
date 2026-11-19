@@ -20,7 +20,7 @@
 - Publish health probe hits `/`; every app version must serve `GET /` with 200 or publish fails after ~2 min.
 - Secrets need `Content-Type: application/json-patch+json` and are set per variant.
 - Redeploy wall time ≈ 125 s (install + build); restart ≈ 5 s; MySQL data survives both.
-- One app only (`NODEJS-jf133lqfzu`), confirmed after every step.
+- One app only (`<app-id>`), confirmed after every step.
 
 ## Owner confirmations (2026-11-19, from screenshots)
 - Phone on mobile data, PREFIX URL `/spike/ip`: `remoteAddress` `::ffff:127.0.0.1`, `xForwardedFor` and `cfConnectingIp` both one IP (different from the laptop), no X-Real-IP/Forwarded/Via. Same one-hop pattern on two networks, so `trust proxy = 1` is confirmed.

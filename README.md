@@ -1,6 +1,10 @@
 # AgentDoor
 
-AgentDoor turns a home baker's description into an owner-approved, rehearsed business policy, then opens a shop on her own domain that people and AI assistants can order from.
+**Rehearse your business against tough customers before your first order.** Other tools build you a website. AgentDoor turns a home baker's description into owner-approved rules, rehearses them against realistic customers and a simulated festival rush, enforces them in code (no model in the price path, signed quotes, no oversell), then opens a shop that people and AI assistants can order from.
+
+- **Your busiest day:** 50 rush orders against your own rules: accepted, refused by reason, revenue and "Oversold: 0", using the same booking rule as the live shop.
+- **Money at stake:** every rehearsal issue shows the rupees involved, from engine quotes of concrete orders; fixed issues count as protected.
+- **Rehearsed badge and /how-we-work:** the live shop shows its rehearsal and links to its rules in plain words with the signed policy fingerprint (also in `/.well-known/agentdoor.json`).
 
 - Live: https://agentdoor.shop (also www)
 - Judge entry point: https://agentdoor.shop/launch, the live AgentDoor workspace. Anyone can use it, no access code. Describe your own bakery (English, Hindi or Hinglish), answer Claude's questions, edit products and rules, run the rehearsal, fix issues in place, rerun the free checks and open a preview of your storefront.
@@ -110,8 +114,8 @@ Without both, the script exits before doing anything. Shop secrets are sent to t
 
 | Suite | Result on 19 Nov 2026 |
 |---|---|
-| Unit and integration | 534 passing |
-| End-to-end (Playwright) | 62 passing |
+| Unit and integration | 582 passing |
+| End-to-end (Playwright) | 67 passing |
 | Accessibility (axe) | zero serious or critical violations on every workspace screen, desktop and mobile widths |
 | Concurrency C-CAP-1 | 20 concurrent orders against capacity, zero oversold in repeated runs |
 | Dependency audit | `npm audit` reports 0 vulnerabilities |

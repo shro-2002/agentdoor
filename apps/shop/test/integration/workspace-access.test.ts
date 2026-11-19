@@ -133,4 +133,18 @@ describe("early access: who may create a draft", () => {
     expect((await b.post("/launch/access", { description: BENGALURU, code: CODE })).status).toBe(503);
     expect(await draftCount(shop)).toBe(0);
   });
+
+  it("an open workspace needs no code: no dialog, a draft is made, and the per-address limit still holds", async () => {
+    shop = await startWorkspaceShop({ code: null, open: true });
+    const page = (await shop.browser().get("/launch")).text;
+    expect(page).not.toContain("<dialog");
+    expect(page).toContain('data-access="ok"');
+    const r = await shop.browser().post("/launch", { description: BENGALURU }, forIp(40));
+    expect(r.status).toBe(303);
+    await shop.jobs.idle();
+    expect(await draftCount(shop)).toBe(1);
+    for (let i = 0; i < LIMITS.draftsPerIpPerHour; i++) await shop.browser().post("/launch", { description: BENGALURU }, forIp(41));
+    await shop.jobs.idle();
+    expect((await shop.browser().post("/launch", { description: BENGALURU }, forIp(41))).status).toBe(429);
+  });
 });

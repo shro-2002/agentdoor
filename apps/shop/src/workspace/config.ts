@@ -26,8 +26,10 @@ export const LIMITS = {
 } as const;
 
 export interface WorkspaceConfig {
-  /** Unset means the workspace is closed: no drafts, no model calls. */
+  /** Unset (and not open) means the workspace is closed: no drafts, no model calls. */
   accessCode: string | null;
+  /** WORKSPACE_OPEN=1: anyone may create a business without a code; spend caps and rate limits still apply. */
+  open: boolean;
   apiKey: string | null;
   /** Global spend cap, in millionths of a dollar. */
   budgetMicro: number;
@@ -45,6 +47,7 @@ export function loadWorkspaceConfig(env: Record<string, string | undefined> = pr
   const code = env.WORKSPACE_ACCESS_CODE?.trim();
   return {
     accessCode: code ? code : null,
+    open: env.WORKSPACE_OPEN?.trim() === "1",
     apiKey: env.ANTHROPIC_API_KEY?.trim() || null,
     budgetMicro: Math.round(positive(env.WORKSPACE_BUDGET_USD, DEFAULT_BUDGET_USD) * MICRO),
     draftCapMicro: Math.round(DEFAULT_DRAFT_CAP_USD * MICRO),

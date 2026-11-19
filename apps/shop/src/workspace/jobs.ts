@@ -86,7 +86,7 @@ export class WorkspaceJobs {
   }
 
   async start(draftId: string, kind: JobKind, payload: unknown = null): Promise<StartResult> {
-    if (this.cfg.accessCode === null) return { ok: false, reason: "CLOSED", message: "Workspace is closed." };
+    if (this.cfg.accessCode === null && !this.cfg.open) return { ok: false, reason: "CLOSED", message: "Workspace is closed." };
     const existing = await this.current(draftId);
     if (existing && (existing.status === "queued" || existing.status === "running"))
       return { ok: false, reason: "BUSY", message: "Something is already running for this business." };

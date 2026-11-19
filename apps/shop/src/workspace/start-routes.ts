@@ -20,13 +20,14 @@ const str = (v: unknown, max: number): string => (typeof v === "string" ? v.slic
 /** The landing page, the early-access step and draft creation. Everything that makes a draft goes through `attempt`. */
 export function registerStart(kit: RouteKit): void {
   const { router, pool, now, config, cfg, sameOrigin, send, cookieBase } = kit;
-  const early = (req: Request): boolean => cfg.accessCode !== null && hasEarlyAccess(req.headers.cookie, config.sessionSecret, cfg.accessCode, now());
+  const isClosed = cfg.accessCode === null && !cfg.open;
+  const early = (req: Request): boolean => cfg.open || (cfg.accessCode !== null && hasEarlyAccess(req.headers.cookie, config.sessionSecret, cfg.accessCode, now()));
 
   const landing = (req: Request, flash: { tone: Tone; text: string } | null, description = ""): string =>
     startPage({ closed: false, flash, description, hasDrafts: kit.owned(req).length > 0, earlyAccess: early(req) });
 
   router.get("/launch", (req, res) => {
-    const closed = cfg.accessCode === null;
+    const closed = isClosed;
     const example = exampleText(req.query.example);
     send(res, closed ? startPage({ closed: true, flash: null, hasDrafts: false, earlyAccess: false }) : landing(req, kit.takeFlash(req, res), example));
   });
@@ -42,8 +43,8 @@ export function registerStart(kit: RouteKit): void {
     send(res, accessStepPage({ description, flash: { tone: "bad", text } }), status);
 
   async function attempt(req: Request, res: Response, issueCookie: boolean): Promise<void> {
-    const expected = cfg.accessCode;
-    if (expected === null) return send(res, startPage({ closed: true, flash: null, hasDrafts: false, earlyAccess: false }), HTTP.unavailable);
+    const expected = cfg.accessCode ?? "";
+    if (isClosed) return send(res, startPage({ closed: true, flash: null, hasDrafts: false, earlyAccess: false }), HTTP.unavailable);
     const raw = str(req.body?.description, LIMITS.maxDescriptionChars + OVERSIZE_SLACK);
     const parsed = DescriptionSchema.safeParse(raw);
     if (!parsed.success) return send(res, landing(req, { tone: "bad", text: parsed.error.issues[0]?.message ?? "Please check what you wrote." }, raw.slice(0, LIMITS.maxDescriptionChars)), HTTP.badRequest);

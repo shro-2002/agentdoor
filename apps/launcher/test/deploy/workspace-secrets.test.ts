@@ -13,7 +13,7 @@ function scriptNames(): string[] {
 
 describe("secrets allow-list for the live workspace", () => {
   it("carries the runtime key, the access code and the budget into PREVIEW and PUBLISH", () => {
-    for (const name of ["ANTHROPIC_API_KEY", "WORKSPACE_ACCESS_CODE", "WORKSPACE_BUDGET_USD"]) expect(ALLOWED_SECRET_NAMES).toContain(name);
+    for (const name of ["ANTHROPIC_API_KEY", "WORKSPACE_ACCESS_CODE", "WORKSPACE_BUDGET_USD", "WORKSPACE_OPEN"]) expect(ALLOWED_SECRET_NAMES).toContain(name);
     for (const name of REQUIRED_SECRET_NAMES) expect(ALLOWED_SECRET_NAMES).toContain(name);
   });
 

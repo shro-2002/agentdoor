@@ -17,6 +17,8 @@ export interface WsShop extends TestShop {
 
 export interface WsOptions extends FakeSdkOptions {
   code?: string | null;
+  /** WORKSPACE_OPEN=1: no code needed. */
+  open?: boolean;
   budgetUsd?: number;
   draftCapUsd?: number;
   apiKey?: string | null;
@@ -29,6 +31,7 @@ export async function startWorkspaceShop(o: WsOptions = {}): Promise<WsShop> {
   const clock2 = { now: Date.now() };
   const base = loadWorkspaceConfig({
     WORKSPACE_ACCESS_CODE: o.code === undefined ? CODE : (o.code ?? undefined),
+    WORKSPACE_OPEN: o.open ? "1" : undefined,
     WORKSPACE_BUDGET_USD: o.budgetUsd === undefined ? undefined : String(o.budgetUsd),
     ANTHROPIC_API_KEY: o.apiKey === undefined ? "test-key-never-used" : (o.apiKey ?? undefined),
   });

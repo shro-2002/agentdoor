@@ -28,7 +28,7 @@ export const REQUIRED_SECRET_NAMES = [
  * ANTHROPIC_API_KEY is the runtime key for its live Claude calls; the budget is a plain number (USD).
  * The owner adds these values to `.agentdoor/secrets/<variant>.json`; nothing here generates them.
  */
-export const OPTIONAL_SECRET_NAMES = ["PLATFORM_BASE_URL", "ANTHROPIC_API_KEY", "WORKSPACE_ACCESS_CODE", "WORKSPACE_BUDGET_USD"] as const;
+export const OPTIONAL_SECRET_NAMES = ["PLATFORM_BASE_URL", "ANTHROPIC_API_KEY", "WORKSPACE_ACCESS_CODE", "WORKSPACE_BUDGET_USD", "WORKSPACE_OPEN"] as const;
 
 /** Of the optional names, the ones whose value is a credential: never allowed inside a packed file. */
 export const PRIVATE_OPTIONAL_SECRET_NAMES = ["ANTHROPIC_API_KEY", "WORKSPACE_ACCESS_CODE"] as const;

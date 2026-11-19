@@ -14,6 +14,15 @@ export default defineConfig({
       },
       {
         test: {
+          name: "launcher",
+          root: "apps/launcher",
+          include: ["test/**/*.test.ts"],
+          environment: "node",
+          testTimeout: 60_000,
+        },
+      },
+      {
+        test: {
           name: "shop",
           root: "apps/shop",
           include: ["test/**/*.test.ts"],

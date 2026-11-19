@@ -18,8 +18,10 @@ export interface Violation {
 }
 
 /** Serious and critical axe violations on the current page (A11Y-2, A11Y-3 need zero). */
-export async function seriousViolations(page: Page): Promise<Violation[]> {
-  const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+export async function seriousViolations(page: Page, exclude: string[] = []): Promise<Violation[]> {
+  const builder = new AxeBuilder({ page }).withTags(TAGS);
+  for (const selector of exclude) builder.exclude(selector);
+  const results = await builder.analyze();
   return results.violations
     .filter((v) => v.impact === "serious" || v.impact === "critical")
     .map((v) => ({ id: v.id, impact: v.impact, nodes: v.nodes.slice(0, 3).map((n) => `${n.target.join(" ")} :: ${n.failureSummary?.split("\n")[1] ?? ""}`) }));

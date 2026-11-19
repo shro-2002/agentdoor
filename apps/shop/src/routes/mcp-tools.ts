@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { isTransientDbError } from "../db/errors.js";
 import { messageFor, withMessages, type ErrorCode } from "../http/envelope.js";
 import { businessView } from "../services/business-view.js";
 import type { ServiceContext } from "../services/context.js";
@@ -89,14 +90,36 @@ async function orderTool(ctx: ServiceContext, args: z.infer<typeof McpPlaceOrder
     channel: "mcp",
   });
   if (out.kind === "ERROR") return toolError(out.code);
-  // The access token exists only on the response that created the order; replays cannot rebuild it.
-  const statusUrl = out.accessToken
-    ? `${ctx.config.publicBaseUrl.replace(/\/$/, "")}/orders/${out.orderId}?t=${out.accessToken}`
-    : undefined;
   const message = out.created
     ? "The owner will confirm your order. Keep the status link."
-    : "This order was already placed (same idempotencyKey). Use the status link from the first response.";
-  return ok({ orderId: out.orderId, status: out.status, statusUrl, message }, `Order ${out.orderId} ${out.status}. ${message}`);
+    : "This order was already placed (same idempotencyKey). The status link is the same as before.";
+  return ok(
+    { orderId: out.orderId, status: out.status, statusUrl: out.statusUrl, message },
+    `Order ${out.orderId} ${out.status}. ${message}`,
+  );
+}
+
+/**
+ * Anything a handler throws would otherwise reach the client through the SDK's tool error
+ * (DB user, host, SQL). Log it, answer with a code only.
+ */
+export async function guarded(
+  ctx: ServiceContext,
+  tool: string,
+  run: () => Promise<ToolResult> | ToolResult,
+): Promise<ToolResult> {
+  try {
+    return await run();
+  } catch (err) {
+    const transient = isTransientDbError(err);
+    ctx.log({
+      level: "error",
+      event: transient ? "db_unavailable" : "tool_failed",
+      tool,
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return toolError(transient ? "RETRY_LATER" : "INTERNAL");
+  }
 }
 
 /** A fresh server per request: the transport is stateless (no sessions). */
@@ -110,11 +133,12 @@ export function createMcpServer(ctx: ServiceContext): McpServer {
       inputSchema: TOOL_INPUT_SCHEMAS.get_business_info,
       annotations: { readOnlyHint: true },
     },
-    async (): Promise<ToolResult> => {
-      if (!ctx.launch.launched) return toolError("SHOP_NOT_LAUNCHED");
-      const view = businessView(ctx.launch.policy, ctx.launch.policyHash);
-      return ok(view, `${view.name}: ${view.catalog.length} items, prices fixed. Policy ${view.policyHash}.`);
-    },
+    (): Promise<ToolResult> =>
+      guarded(ctx, "get_business_info", () => {
+        if (!ctx.launch.launched) return toolError("SHOP_NOT_LAUNCHED");
+        const view = businessView(ctx.launch.policy, ctx.launch.policyHash);
+        return ok(view, `${view.name}: ${view.catalog.length} items, prices fixed. Policy ${view.policyHash}.`);
+      }),
   );
   server.registerTool(
     "get_quote",
@@ -123,7 +147,7 @@ export function createMcpServer(ctx: ServiceContext): McpServer {
       inputSchema: TOOL_INPUT_SCHEMAS.get_quote,
       annotations: { readOnlyHint: true },
     },
-    async (args): Promise<ToolResult> => quoteTool(ctx, args),
+    (args): Promise<ToolResult> => guarded(ctx, "get_quote", () => quoteTool(ctx, args)),
   );
   server.registerTool(
     "place_order",
@@ -132,7 +156,7 @@ export function createMcpServer(ctx: ServiceContext): McpServer {
       inputSchema: TOOL_INPUT_SCHEMAS.place_order,
       annotations: { destructiveHint: false, idempotentHint: true },
     },
-    async (args): Promise<ToolResult> => orderTool(ctx, args),
+    (args): Promise<ToolResult> => guarded(ctx, "place_order", () => orderTool(ctx, args)),
   );
   return server;
 }

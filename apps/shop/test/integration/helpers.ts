@@ -71,6 +71,7 @@ export const orderInput = (
   idempotencyKey: uuid(),
   channel: "web",
   nowMs: NOW_MS,
+  accessSecret: Buffer.alloc(32, 7),
   ...over,
 });
 

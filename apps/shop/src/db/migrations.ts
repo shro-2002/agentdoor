@@ -4,7 +4,7 @@ const MIGRATE_LOCK = "agentdoor_migrate";
 const LOCK_WAIT_SECONDS = 10;
 
 /** 04 §6. Additive only: PREVIEW and PUBLISH share one database. */
-const STATEMENTS: string[] = [
+export const MIGRATION_STATEMENTS: string[] = [
   `CREATE TABLE IF NOT EXISTS orders (
     id CHAR(26) PRIMARY KEY,
     quote_id CHAR(36) NOT NULL,
@@ -27,19 +27,19 @@ const STATEMENTS: string[] = [
     updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
     UNIQUE KEY uq_orders_idem (idempotency_key),
     KEY idx_orders_status_date (status, fulfil_date)
-  )`,
+  ) DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS quote_redemptions (
     quote_id CHAR(36) PRIMARY KEY,
     order_id CHAR(26) NOT NULL,
     redeemed_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
-  )`,
+  ) DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS capacity_ledger (
     fulfil_date DATE PRIMARY KEY,
     reserved_units INT NOT NULL DEFAULT 0,
     rush_units INT NOT NULL DEFAULT 0,
     CHECK (reserved_units >= 0),
     CHECK (rush_units >= 0)
-  )`,
+  ) DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS contact_messages (
     id CHAR(26) PRIMARY KEY,
     name VARCHAR(60) NOT NULL,
@@ -47,7 +47,7 @@ const STATEMENTS: string[] = [
     message VARCHAR(2000) NOT NULL,
     email_status ENUM('SENT','FAILED') NOT NULL,
     created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
-  )`,
+  ) DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS audit_events (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -56,7 +56,7 @@ const STATEMENTS: string[] = [
     order_id CHAR(26) NULL,
     detail JSON NULL,
     KEY idx_audit_order (order_id)
-  )`,
+  ) DEFAULT CHARSET=utf8mb4`,
 ];
 
 /** Throws on failure. The lock is session-scoped, so it needs one dedicated connection. */
@@ -70,7 +70,7 @@ export async function runMigrations(pool: Pool): Promise<void> {
     if ((rows as { got: number | null }[])[0]?.got !== 1)
       throw new Error("could not acquire migration lock");
     try {
-      for (const sql of STATEMENTS) await conn.query(sql);
+      for (const sql of MIGRATION_STATEMENTS) await conn.query(sql);
     } finally {
       await conn.query("SELECT RELEASE_LOCK(?)", [MIGRATE_LOCK]);
     }

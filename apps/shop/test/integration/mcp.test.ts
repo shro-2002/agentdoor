@@ -1,7 +1,20 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { RPC_HEADERS, callTool, json, newKey, quoteBody, rpc, startShop, type TestShop } from "./http-helpers.js";
+import type { Pool } from "mysql2/promise";
+import { guarded } from "../../src/routes/mcp-tools.js";
+import {
+  RPC_HEADERS,
+  callTool,
+  customerBody,
+  getQuoteToken,
+  json,
+  newKey,
+  quoteBody,
+  rpc,
+  startShop,
+  type TestShop,
+} from "./http-helpers.js";
 
 type ToolResult = {
   isError?: boolean;
@@ -76,6 +89,7 @@ describe("MCP route (I-MCP-1..4)", () => {
     const again = (await client.callTool({ name: "place_order", arguments: args })) as ToolResult;
     expect(again.isError).toBeFalsy();
     expect(again.structuredContent!.orderId).toBe(sc.orderId);
+    expect(again.structuredContent!.statusUrl).toBe(sc.statusUrl);
     // the human status page works from the URL the agent was given
     const page = await fetch(String(sc.statusUrl).replace(/^https?:\/\/[^/]+/, shop.base));
     expect(page.status).toBe(200);
@@ -169,5 +183,55 @@ describe("MCP route (I-MCP-1..4)", () => {
     } finally {
       await bad.close();
     }
+  });
+});
+
+describe("MCP tool errors never leak internals (R2 #3)", () => {
+  const SECRET_TEXT = "Access denied for user 'shop_rw'@'10.1.2.3' (using password: YES)";
+
+  it("place_order with a database that throws -> isError INTERNAL, text only in the log", async () => {
+    const boom = new Error(SECRET_TEXT);
+    const broken = {
+      query: async () => {
+        throw boom;
+      },
+      getConnection: async () => {
+        throw boom;
+      },
+    } as unknown as Pool;
+    const shop = await startShop({ appPool: broken });
+    try {
+      const token = await getQuoteToken(shop);
+      const r = await callTool(shop, "place_order", {
+        quoteToken: token,
+        customerName: customerBody.name,
+        customerPhone: customerBody.phone,
+        idempotencyKey: newKey(),
+      });
+      expect(r.status).toBe(200);
+      expect(r.body.result.isError).toBe(true);
+      expect(r.body.result.structuredContent.error.code).toBe("INTERNAL");
+      expect(r.text).not.toContain("shop_rw");
+      expect(r.text).not.toContain("Access denied");
+      expect(JSON.stringify(shop.logs)).toContain("shop_rw");
+    } finally {
+      await shop.close();
+    }
+  });
+
+  it("guarded(): unexpected error -> INTERNAL, transient database error -> RETRY_LATER", async () => {
+    const logs: unknown[] = [];
+    const ctx = { log: (l: unknown) => logs.push(l) } as unknown as Parameters<typeof guarded>[0];
+    const plain = await guarded(ctx, "t", async () => {
+      throw new Error(SECRET_TEXT);
+    });
+    expect(plain.isError).toBe(true);
+    expect(plain.structuredContent).toMatchObject({ error: { code: "INTERNAL" } });
+    const transient = await guarded(ctx, "t", async () => {
+      throw Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:3306"), { code: "ECONNREFUSED" });
+    });
+    expect(transient.structuredContent).toMatchObject({ error: { code: "RETRY_LATER" } });
+    expect(JSON.stringify([plain, transient])).not.toMatch(/shop_rw|ECONNREFUSED/);
+    expect(logs).toHaveLength(2);
   });
 });

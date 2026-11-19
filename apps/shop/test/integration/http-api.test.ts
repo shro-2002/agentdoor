@@ -122,7 +122,7 @@ describe("REST API (I-API-1..3, 5, 6, SEC-1, SEC-2, SEC-6)", () => {
     const replay = await json(shop, "POST", "/api/orders", body);
     expect(replay.status).toBe(200);
     expect(replay.body.data.orderId).toBe(orderId);
-    expect(replay.body.data.accessToken).toBeUndefined();
+    expect(replay.body.data.accessToken).toBe(accessToken);
     const conflict = await json(shop, "POST", "/api/orders", {
       ...body,
       customer: { ...customerBody, name: "Someone else" },

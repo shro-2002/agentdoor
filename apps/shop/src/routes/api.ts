@@ -58,8 +58,8 @@ export function apiRouter(ctx: ServiceContext, limiters: Limiters): Router {
       channel: "web",
     });
     if (out.kind === "ERROR") return sendError(req, res, out.code);
-    const { orderId, status, accessToken } = out;
-    sendData(res, out.created ? 201 : 200, { orderId, status, accessToken });
+    const { orderId, status, accessToken, statusUrl } = out;
+    sendData(res, out.created ? 201 : 200, { orderId, status, accessToken, statusUrl });
   });
 
   router.get("/api/orders/:id", limiters.mcpRead, async (req, res) => {

@@ -2,13 +2,13 @@ import {
   QuoteRequestSchema,
   capacityOn,
   evaluate,
-  verifyQuoteToken,
+  decodeQuoteToken,
   type BusinessPolicy,
   type OrderStatus,
   type QuoteTokenPayload,
 } from "@agentdoor/core";
 import { isTransientDbError } from "../db/errors.js";
-import { placeOrder as placeOrderInDb } from "../db/orders.js";
+import { findReplay, placeOrder as placeOrderInDb, type PlaceOrderResult } from "../db/orders.js";
 import { maskPhone } from "../log.js";
 import type { ServiceContext } from "./context.js";
 
@@ -36,7 +36,7 @@ export type OrderErrorCode =
   | "RETRY_LATER";
 
 export type OrderOutcome =
-  | { kind: "OK"; created: boolean; orderId: string; status: OrderStatus; accessToken?: string }
+  | { kind: "OK"; created: boolean; orderId: string; status: OrderStatus; accessToken: string; statusUrl: string }
   | { kind: "ERROR"; code: OrderErrorCode };
 
 const fail = (code: OrderErrorCode): OrderOutcome => ({ kind: "ERROR", code });
@@ -58,44 +58,69 @@ function engineAgrees(policy: BusinessPolicy, q: QuoteTokenPayload): boolean {
   );
 }
 
-/** Shared by REST `POST /api/orders` and MCP `place_order`. */
+/** The customer's status page; the token is reproducible, so replays return the same link. */
+export const statusUrlFor = (publicBaseUrl: string, orderId: string, token: string): string =>
+  `${publicBaseUrl.replace(/\/$/, "")}/orders/${orderId}?t=${token}`;
+
+/** Freshness checks that apply only to a NEW order, never to the replay of an existing one. */
+function freshnessError(ctx: ServiceContext, quote: QuoteTokenPayload, nowMs: number): OrderErrorCode | null {
+  if (!ctx.launch.launched) return "SHOP_NOT_LAUNCHED";
+  if (Math.floor(nowMs / MS_PER_SECOND) >= quote.exp) return "QUOTE_EXPIRED";
+  if (quote.policyHash !== ctx.launch.policyHash) return "QUOTE_STALE_POLICY";
+  if (!engineAgrees(ctx.launch.policy, quote)) return "QUOTE_INVALID";
+  return null;
+}
+
+function toOutcome(ctx: ServiceContext, cmd: OrderCommand, quote: QuoteTokenPayload, r: PlaceOrderResult): OrderOutcome {
+  if (!r.ok) return fail(r.code);
+  ctx.log({
+    level: "info",
+    event: r.created ? "order_placed" : "order_replayed",
+    orderId: r.orderId,
+    channel: cmd.channel,
+    totalPaise: quote.totalPaise,
+    phone: maskPhone(cmd.customerPhone),
+  });
+  const statusUrl = statusUrlFor(ctx.config.publicBaseUrl, r.orderId, r.accessToken);
+  return { kind: "OK", created: r.created, orderId: r.orderId, status: r.status, accessToken: r.accessToken, statusUrl };
+}
+
+/**
+ * Shared by REST `POST /api/orders` and MCP `place_order`. Order of checks: signature and shape,
+ * then idempotent replay (a lost response must be recoverable after expiry or a redeploy), then
+ * expiry, policy hash and the engine re-check for a new order.
+ */
 export async function placeOrder(ctx: ServiceContext, cmd: OrderCommand): Promise<OrderOutcome> {
   if (!ctx.launch.launched) return fail("SHOP_NOT_LAUNCHED");
-  const { policy, policyHash } = ctx.launch;
+  const { policy } = ctx.launch;
   const nowMs = ctx.now();
-  const verified = verifyQuoteToken(cmd.quoteToken, ctx.config.signingPublicKey, {
-    currentPolicyHash: policyHash,
-    nowSec: Math.floor(nowMs / MS_PER_SECOND),
-  });
-  if (!verified.ok) return fail(verified.code);
-  const quote = verified.payload;
-  if (!engineAgrees(policy, quote)) return fail("QUOTE_INVALID");
-  const date = (quote.request as { date: string }).date;
+  const decoded = decodeQuoteToken(cmd.quoteToken, ctx.config.signingPublicKey);
+  if (!decoded.ok) return fail(decoded.code);
+  const quote = decoded.payload;
+  const customer = {
+    name: cmd.customerName,
+    phone: cmd.customerPhone,
+    deliveryAddress: cmd.deliveryAddress,
+    notes: cmd.notes,
+  };
+  const accessSecret = ctx.config.sessionSecret;
   try {
+    const replay = await findReplay(ctx.pool, { quote, customer, idempotencyKey: cmd.idempotencyKey, accessSecret });
+    if (replay) return toOutcome(ctx, cmd, quote, replay);
+    const refusal = freshnessError(ctx, quote, nowMs);
+    if (refusal) return fail(refusal);
+    const date = (quote.request as { date: string }).date;
     const result = await placeOrderInDb(ctx.pool, {
       quote,
       fulfilDate: date,
       capacity: { unitsCap: capacityOn(policy, date), rushCap: policy.rush?.maxRushUnitsPerDay ?? 0 },
-      customer: {
-        name: cmd.customerName,
-        phone: cmd.customerPhone,
-        deliveryAddress: cmd.deliveryAddress,
-        notes: cmd.notes,
-      },
+      customer,
       idempotencyKey: cmd.idempotencyKey,
       channel: cmd.channel,
       nowMs,
+      accessSecret,
     });
-    if (!result.ok) return fail(result.code);
-    ctx.log({
-      level: "info",
-      event: result.created ? "order_placed" : "order_replayed",
-      orderId: result.orderId,
-      channel: cmd.channel,
-      totalPaise: quote.totalPaise,
-      phone: maskPhone(cmd.customerPhone),
-    });
-    return { kind: "OK", created: result.created, orderId: result.orderId, status: result.status, accessToken: result.accessToken };
+    return toOutcome(ctx, cmd, quote, result);
   } catch (err) {
     if (!isTransientDbError(err)) throw err;
     ctx.log({ level: "error", event: "db_unavailable", message: (err as Error).message });

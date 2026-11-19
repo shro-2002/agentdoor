@@ -42,13 +42,14 @@ describe("placeOrder", () => {
     expect(await count(pool, "orders")).toBe(1);
   });
 
-  it("I-ORD-3 same idem key + same body → same order, one row, no token", async () => {
+  it("I-ORD-3 same idem key + same body → same order, one row, same access token", async () => {
     const input = orderInput();
     const a = await placeOrder(pool, input);
     const b = await placeOrder(pool, input);
     expect(a.ok && b.ok && a.orderId === b.orderId).toBe(true);
     expect(b.ok && b.created).toBe(false);
-    expect(b.ok && b.accessToken).toBeUndefined();
+    expect(a.ok && b.ok && b.accessToken === a.accessToken).toBe(true);
+    expect(b.ok && b.accessToken).toMatch(/^[A-Za-z0-9_-]{32,}$/);
     expect(await count(pool, "orders")).toBe(1);
   });
 

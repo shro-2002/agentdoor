@@ -7,7 +7,7 @@ import {
   type OrderStatus,
   type QuoteTokenPayload,
 } from "@agentdoor/core";
-import { newAccessToken, newOrderId } from "./ids.js";
+import { deriveAccessToken, newOrderId } from "./ids.js";
 import { isDuplicateKey, withTransaction } from "./tx.js";
 
 export interface CustomerDetails {
@@ -27,6 +27,8 @@ export interface PlaceOrderInput {
   idempotencyKey: string;
   channel: "web" | "mcp";
   nowMs: number;
+  /** Server secret the order's access token is derived from (see `deriveAccessToken`). */
+  accessSecret: Buffer;
 }
 
 export type PlaceOrderErrorCode =
@@ -42,8 +44,8 @@ export type PlaceOrderResult =
       created: boolean;
       orderId: string;
       status: OrderStatus;
-      /** Present only on the response that created the order. */
-      accessToken?: string;
+      /** Reproducible, so the first response and every replay carry the same token. */
+      accessToken: string;
     }
   | { ok: false; code: PlaceOrderErrorCode };
 
@@ -61,7 +63,7 @@ interface ExistingOrder {
 const AUDIT_ORDER_PLACED = "ORDER_PLACED";
 
 /** "Same body" = same quote id, request and customer; channel is transport, not content. */
-const requestHashOf = (i: PlaceOrderInput): string =>
+const requestHashOf = (i: ReplayInput): string =>
   sha256Hex(
     canonicalJson({ qid: i.quote.qid, request: i.quote.request, customer: i.customer }),
   );
@@ -80,10 +82,27 @@ async function findByIdempotencyKey(
     : null;
 }
 
-function replayExisting(existing: ExistingOrder, hash: string): PlaceOrderResult {
-  return existing.requestHash === hash
-    ? { ok: true, created: false, orderId: existing.id, status: existing.status }
+export type ReplayInput = Pick<PlaceOrderInput, "quote" | "customer" | "idempotencyKey" | "accessSecret">;
+
+function replayExisting(existing: ExistingOrder, i: ReplayInput): PlaceOrderResult {
+  return existing.requestHash === requestHashOf(i)
+    ? {
+        ok: true,
+        created: false,
+        orderId: existing.id,
+        status: existing.status,
+        accessToken: deriveAccessToken(i.accessSecret, existing.id).token,
+      }
     : { ok: false, code: "IDEMPOTENCY_CONFLICT" };
+}
+
+/**
+ * Has this idempotency key already produced an order? Callers run it before any freshness check,
+ * so a retry after a lost response gets the original order even once the quote has expired.
+ */
+export async function findReplay(pool: Pool, i: ReplayInput): Promise<PlaceOrderResult | null> {
+  const prior = await findByIdempotencyKey(pool, i.idempotencyKey);
+  return prior ? replayExisting(prior, i) : null;
 }
 
 /** Why the single conditional UPDATE matched nothing: read the row it was guarding. */
@@ -142,7 +161,7 @@ async function attemptPlace(
   const units = i.quote.capacityUnits;
   const rushUnits = i.quote.isRush ? units : 0;
   const orderId = newOrderId(i.nowMs);
-  const access = newAccessToken();
+  const access = deriveAccessToken(i.accessSecret, orderId);
   try {
     await conn.query("INSERT INTO quote_redemptions (quote_id, order_id, redeemed_at) VALUES (?, ?, ?)", [
       i.quote.qid,
@@ -173,8 +192,8 @@ export async function placeOrder(pool: Pool, input: PlaceOrderInput): Promise<Pl
     "INSERT IGNORE INTO capacity_ledger (fulfil_date, reserved_units, rush_units) VALUES (?, 0, 0)",
     [input.fulfilDate],
   );
-  const prior = await findByIdempotencyKey(pool, input.idempotencyKey);
-  if (prior) return replayExisting(prior, requestHash);
+  const prior = await findReplay(pool, input);
+  if (prior) return prior;
 
   const tx = await withTransaction(pool, (conn) => attemptPlace(conn, input, requestHash));
   if (!tx.ok) return tx;
@@ -184,8 +203,7 @@ export async function placeOrder(pool: Pool, input: PlaceOrderInput): Promise<Pl
   if (attempt.kind === "REFUSED") return { ok: false, code: attempt.code };
 
   // DUPLICATE: the winner has committed (our insert waited on its lock), so re-read by key.
-  const winner = await findByIdempotencyKey(pool, input.idempotencyKey);
-  return winner ? replayExisting(winner, requestHash) : { ok: false, code: "QUOTE_ALREADY_USED" };
+  return (await findReplay(pool, input)) ?? { ok: false, code: "QUOTE_ALREADY_USED" };
 }
 
 export interface TransitionContext {

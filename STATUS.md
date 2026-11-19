@@ -4,7 +4,7 @@ Keep this under ~150 lines. Newest entries on top within each section. Each task
 
 ## Now
 - Phase: **IMPLEMENTATION READY**. T01 live-platform spike done (2026-11-19): all feasibility risks cleared (MCP via CDN, MySQL, domain + HTTPS, mail both ways, proxy, persistence).
-- Next: (T08 done) T10 launcher UI -> T11 shop UI + `/try` -> T12 hardening -> T13 live launch, video, submit. The public challenge page lists the build window as ending 20 Nov 11:59 PM IST; the kickoff brief's exact submission time is still unconfirmed, so aim for 18:00 IST.
+- Next: (T12 done) T13 live launch, video, submit. The public challenge page lists the build window as ending 20 Nov 11:59 PM IST; the kickoff brief's exact submission time is still unconfirmed, so aim for 18:00 IST.
 - Core engine, signing, rehearsal, the shop and the deploy script exist. The shop is LIVE on https://agentdoor.shop with a stand-in signed bundle (bakery fixture); the real launch bundle comes from T08/T13. Shop UI is bare (T11).
 - Deadline: Fri 20 Nov 2026. Exact submission time: **UNCONFIRMED**. Assume 18:00 IST.
 - Reviews remaining: **R2** (after T06) and **R4** (before submit). No further architecture reviews unless a fatal feasibility blocker appears.
@@ -47,8 +47,37 @@ Keep this under ~150 lines. Newest entries on top within each section. Each task
 - 2026-11-18: ~~Opus 5.5 for T05~~ superseded by R0-8: Sonnet 5.5 (high effort) for every task; Haiku only for string-table subagents.
 - 2026-11-18 (R0): Public replay `/try` + ribbon + mandatory video (R20). Launcher cut to 4 pages; 3 MCP tools; no Haiku explain; 1 clarify round; linear deploy script; R1/R3 skipped. Purchases tonight. Wire schemas for structured output. Fixtures keyed by id with injected clock; scenarios use daysAhead. Ledger row before BEGIN, single conditional UPDATE, idempotent DUPLICATE path. trust proxy = measured hops. Human cost checkpoints, budget expected $63 / caps $82.50. `secret sync` argv accepted with controls.
 
+## Security checklist (T12, 2026-11-19; planning/08 §3)
+| id | result | evidence |
+|---|---|---|
+| SEC-1 | ticked | `crypto.test.ts` U-SIG-2; `http-api.test.ts` "SEC-1: tampered token and a validly signed but mispriced token" |
+| SEC-2 | ticked | `orders.test.ts` I-ORD-2; `http-api.test.ts` "SEC-2: the same quote cannot buy twice" |
+| SEC-3 | ticked | `security/session.ts:19,75` timingSafeEqual; `owner-contact.test.ts` wrong token -> generic 401; `rate-limit.test.ts` owner login 5/IP + 30 global; `owner-session.test.ts` |
+| SEC-4 | ticked | `owner-contact.test.ts` "SEC-4: cross-origin or origin-less POSTs are 403"; `origin.test.ts` |
+| SEC-5 | ticked | `owner-contact.test.ts` "...every customer-controlled field escaped (SEC-5)"; new `security-headers.test.ts` (no script-src override, no unsafe-inline/eval) |
+| SEC-6 | ticked | `http-api.test.ts` "I-API-3 / SEC-6" identical 404 bodies |
+| SEC-7 | ticked | `http-api.test.ts` I-API-2; `rate-limit.test.ts` I-API-4; `mcp.test.ts` I-MCP-3; new `engine.test.ts` "SEC-7" (20 lines, qty, options, notes bounds) |
+| SEC-8 | ticked | `deploy.test.ts` U-GATE-3 (gate re-check from disk); `launch-state.test.ts` U-GATE-4; `http-api.test.ts` "U-GATE-4 over HTTP" |
+| SEC-9 | ticked | `pipeline.test.ts` U-CMP-5; `scenarios.test.ts` U-REH-3; `engine.prop.test.ts` P-ENG-2; no codegen/eval path exists (policy is Zod-parsed JSON) |
+| SEC-10 | ticked | new `security/secrets.test.ts` (runs `scripts/check-secrets.sh`); `deploy.test.ts` log-leak tests; `demo.test.ts` U-DEMO-1 |
+| SEC-11 | ticked | `concurrency.test.ts` C-CAP-1 (x5), I-ORD-7/8 |
+| SEC-12 | ticked | `npm audit --omit=dev`: 0 vulnerabilities; exact versions (`pack.ts` EXACT_VERSION check); lockfile; new pack test: every package the built shop imports is in the generated manifest's `dependencies` |
+| SEC-13 | ticked | `owner-contact.test.ts` SEC-13 CRLF + honeypot, I-MAIL-1 |
+| SEC-14 | ticked | new `security/loopback.test.ts` (server address 127.0.0.1); `e2e-1.spec.ts` Host guard 421 + CSP |
+| SEC-15 | ticked | `deploy.test.ts` I-DEP-8 (argv, mode-600 file, per-variant); `pack.test.ts` allow-list; `gddy.test.ts` argv allow-list |
+| SEC-16 | ticked | new `security/sources.test.ts` scans every tracked/untracked-unignored source file (not planning/docs/private/lockfile/CLAUDE.md/STATUS.md) for the four spend commands, prose and argv-array forms: 0 hits; the test file is the only deny-list |
+| SEC-17 | ticked | `demo.test.ts` U-DEMO-1; `try.spec.ts` E2E-5 (no DB writes); new `no-model-client.test.ts` (no model SDK or endpoint in `apps/shop`) |
+| SEC-18 | n/a | `/try/live` (T14 stretch) is not built; I-TRY-1..3 apply only if it is |
+| SEC-19 | ticked | `security/secrets.test.ts`: no `private/`, `.agentdoor/`, env, key, `bundle/`, `out/` file tracked |
+Summary: 18 ticked, 0 live-check, 1 n/a (SEC-18). Nothing needed a live command.
+
 ## Task log
 <!-- T## — date — result (done/blocked) — key decisions — open issues — next -->
+- T12 — 2026-11-19 — **done** — full suite 437 green (was 424), `npm run e2e` 51 green, `tsc` clean, `scripts/fresh-clone-check.sh` PASSED (clone of HEAD, `npm ci`, own MySQL project `agentdoor-fresh` on a free host port, suite + 51 e2e green, only its own project removed).
+  Added: `apps/launcher/test/security/{sources,secrets,loopback}.test.ts`, `apps/shop/test/{security-headers,no-model-client}.test.ts`, a SEC-7 case in core `engine.test.ts`, a manifest-dependency case in `pack.test.ts`; SEC table above. No product code changed; no test loosened.
+  Decisions: (1) `docker-compose.yml` host port is `${AGENTDOOR_DB_PORT:-3307}` (the tests already read `DB_HOST`/`DB_PORT`); the script picks a free port, refuses 3307, and sets e2e port 4398 (`AGENTDOOR_FRESH_E2E_PORT`). It tests committed files only: commit before running. (2) `*.tsbuildinfo` is gitignored (tsc -b writes it at the root).
+  Audit: `npm audit --omit=dev` found 0 vulnerabilities, so nothing was upgraded. Generated deploy manifest: all five shop runtime deps (`express`, `express-rate-limit`, `mysql2`, `zod`, `@modelcontextprotocol/sdk`) are in `dependencies`, exact-pinned; `@agentdoor/core` is inlined by esbuild.
+  Open: `npm run e2e` rewrites the tracked screenshots in `docs/screens/` (pixel noise) so the tree is dirty after any e2e run; discard with `git restore docs/screens` before committing. Nothing in T12 touched live GoDaddy. Next: T13.
 - T11 — 2026-11-19 — **done** — shop pages S1-S5, S7 restyled/built (`apps/shop/src/views/*`, `routes/{order,assets,try}.ts`, `public/{shop.css,shop.js,tokens.css,ui.css,favicon.svg}`), `/try` (S8) with `ProvenanceBadge` in `packages/ui`, read-only `ruleCard`/`gapCard`. Results: vitest 424 green, tsc clean, `npm run e2e` 51 green (E2E-2 with and without JS, E2E-4, E2E-5 with JS off + orders/other tables unchanged, A11Y-2/3: 0 serious/critical on S1-S5, S7, all /try pages at 375 and 1280). Screenshots `docs/screens/s*-{375,1440}.png`.
   Decisions: (1) the pack ships `apps/shop/public` only, so tokens.css/ui.css are committed copies (a unit test keeps them identical to packages/ui) and `pack.test.ts` now lists `public/*`. (2) `/try` re-implements scenario resolve, gap wording and the gate checklist inside the shop (the launcher is not deployed); gaps dismissed in the recording come from `gapFixes` choice `dismiss`. (3) `DEMO_VIDEO_ID` env (11-char id) drives the iframe; unset shows a note. (4) the mini-form quotes against the shop's own launched policy, in memory (no token, no DB). (5) the dashboard lists contact messages under the orders on every tab (tabs filter orders only). (6) e2e builds a fixture-mode launch in a temp dir (`e2e/support/demo-world.ts`, replay fixtures, real `launch` + `exportDemo`); the real `.agentdoor` is untouched.
   Open: real `bundle/try/session.json` still comes from T13 (deploy log fixture only in e2e); `DEMO_VIDEO_ID` must be set on the host; the iframe itself was not exercised in a browser (no network); Hindi is not translated on shop pages.

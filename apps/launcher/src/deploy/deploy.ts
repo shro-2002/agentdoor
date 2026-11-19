@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { APP_NAME, cmd, type Cmd } from "./commands.js";
 import { DeployError } from "./errors.js";
@@ -72,6 +72,8 @@ class Deployer {
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly fetchFn: FetchFn;
   private readonly steps: DeployResult["steps"] = {};
+  private readonly evidence: { step: string; ms: number; ok: boolean }[] = [];
+  private stepStart = 0;
   private appId = "";
   private lastLifecycle: string | undefined;
 
@@ -82,9 +84,27 @@ class Deployer {
     this.fetchFn = o.fetchFn ?? ((url, init) => fetch(url, init));
   }
 
+  private now(): number {
+    return (this.o.nowMs ?? Date.now)();
+  }
+
+  /** Wall time since the previous step ended (or the run started), from the injectable clock. */
   private mark(step: string, status: "done" | "skipped"): void {
+    const at = this.now();
+    const ms = Math.max(0, Math.round(at - this.stepStart));
+    this.stepStart = at;
     this.steps[step] = status;
-    this.log({ event: "step", step, status });
+    this.evidence.push({ step, ms, ok: true });
+    this.log({ event: "step", step, status, ms });
+  }
+
+  /** Names, durations and booleans only. Written once, after a fully successful run, so a failed run keeps the last good log. */
+  private writeEvidence(): void {
+    mkdirSync(this.stateDir, { recursive: true, mode: 0o700 });
+    const tmp = join(this.stateDir, "deploy-log.json.tmp");
+    writeFileSync(tmp, `${JSON.stringify(this.evidence)}\n`, { mode: STATE_MODE });
+    chmodSync(tmp, STATE_MODE);
+    renameSync(tmp, join(this.stateDir, "deploy-log.json"));
   }
 
   private call(c: Cmd): Promise<unknown> {
@@ -92,6 +112,7 @@ class Deployer {
   }
 
   async run(): Promise<DeployResult> {
+    this.stepStart = this.now();
     const trusted = readSigningPublicKey(this.stateDir);
     // Gate first, from disk, before any gddy call or secret file is touched (U-GATE-3).
     const gate = checkGate(this.o.bundleDir, trusted);
@@ -110,8 +131,9 @@ class Deployer {
     await this.secrets("PUBLISH");
     await this.publish(gate.policyHash, baseUrl);
     await this.domainCheck();
-    await smoke({ fetchFn: this.fetchFn, baseUrl, policy: gate.policy, policyHash: gate.policyHash, nowMs: (this.o.nowMs ?? Date.now)() });
+    await smoke({ fetchFn: this.fetchFn, baseUrl, policy: gate.policy, policyHash: gate.policyHash, nowMs: this.now() });
     this.mark("smoke", "done");
+    this.writeEvidence();
     return { appId: this.appId, policyHash: gate.policyHash, baseUrl, steps: this.steps };
   }
 
@@ -323,7 +345,7 @@ class Deployer {
     if (!changed && (await this.bootSeen(undefined))) return this.mark("preview", "skipped");
     let since: number | undefined;
     if (changed) {
-      since = (this.o.nowMs ?? Date.now)() - CLOCK_SKEW_MS;
+      since = this.now() - CLOCK_SKEW_MS;
       await this.call(cmd.restart(this.appId, "PREVIEW"));
     }
     await this.poll(

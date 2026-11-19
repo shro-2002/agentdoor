@@ -258,6 +258,55 @@ describe("logging", () => {
   });
 });
 
+describe("deploy evidence log (.agentdoor/deploy-log.json)", () => {
+  const file = (): string => join(env.root, ".agentdoor/deploy-log.json");
+  const ticking = (): (() => number) => {
+    let t = NOW_MS;
+    return () => (t += 7);
+  };
+
+  it("success writes [{step, ms, ok}] in step order, mode 600, and every step event carries ms", async () => {
+    await deploy(opts({ nowMs: ticking() }));
+    const rows = JSON.parse(readFileSync(file(), "utf8")) as Record<string, unknown>[];
+    expect(rows.map((r) => r.step)).toEqual([
+      "pack", "app", "subscription", "upload", "secrets-preview", "preview", "secrets-publish", "publish", "domain", "smoke",
+    ]);
+    for (const r of rows) {
+      expect(Object.keys(r).sort()).toEqual(["ms", "ok", "step"]);
+      expect(Number.isInteger(r.ms) && (r.ms as number) >= 0).toBe(true);
+      expect(r.ok).toBe(true);
+    }
+    expect(rows.find((r) => r.step === "subscription")).toMatchObject({ ok: true }); // skipped step is ok
+    expect(statSync(file()).mode & 0o777).toBe(0o600);
+    const stepLogs = logs.filter((l) => l.event === "step");
+    expect(stepLogs).toHaveLength(rows.length);
+    for (const l of stepLogs) expect(typeof l.ms).toBe("number");
+  });
+
+  it("holds no secret values, tokens, argv or paths", async () => {
+    const lines: string[] = [];
+    await deploy(opts({ printLine: (l) => lines.push(l) }));
+    const text = readFileSync(file(), "utf8");
+    const token = (lines[0] as string).slice((lines[0] as string).indexOf(": ") + 2);
+    for (const leak of [token, SECRET_RECIPIENT, "APP-NEW", env.root, "--app-id", "shop.test"]) expect(text).not.toContain(leak);
+    for (const f of ["preview", "publish"]) {
+      const sec = JSON.parse(readFileSync(join(env.root, `.agentdoor/secrets/${f}.json`), "utf8")) as Record<string, string>;
+      for (const name of ["QUOTE_SIGNING_PRIVATE_KEY", "SESSION_SECRET", "OWNER_TOKEN_HASH"]) if (sec[name]) expect(text).not.toContain(sec[name]);
+    }
+  });
+
+  it("a failed run writes nothing, and does not overwrite an existing good log", async () => {
+    env.writeState({ failOnce: ["hosting deployment publish"] });
+    await expect(deploy(opts())).rejects.toBeInstanceOf(DeployError);
+    expect(existsSync(file())).toBe(false);
+    const good = '[{"step":"pack","ms":1,"ok":true}]\n';
+    writeFileSync(file(), good, { mode: 0o600 });
+    env.writeState({ failOnce: ["hosting source upload"] });
+    await expect(deploy(opts())).rejects.toBeInstanceOf(DeployError);
+    expect(readFileSync(file(), "utf8")).toBe(good);
+  });
+});
+
 describe("smoke and polling", () => {
   it("fails when the public health reports a different policy", async () => {
     const stale: DeployOptions["fetchFn"] = async (url) =>

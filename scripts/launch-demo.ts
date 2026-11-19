@@ -1,4 +1,4 @@
-// Usage: npx tsx scripts/launch-demo.ts [--replay | --fresh]
+// Usage: npx tsx scripts/launch-demo.ts [--transcript <name>] [--replay | --fresh]   (default transcript: seeded-leaky)
 // T13 launch of "Meera's Kitchen" — an illustrative persona based on common home-bakery practices
 // (NOT a real customer). Drives the launcher's own routes in-process on a free loopback port with the
 // real ClaudeClient (record mode = live calls that are also written to .agentdoor/launch-fixtures, so a
@@ -25,7 +25,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const AGENTDOOR_DIR = path.join(ROOT, ".agentdoor");
 const FIXTURES_DIR = path.join(AGENTDOOR_DIR, "launch-fixtures");
 const STATE_FILE = path.join(AGENTDOOR_DIR, "launch-demo.json");
-const TRANSCRIPT = path.join(ROOT, "apps/launcher/fixtures/transcripts/seeded-leaky.txt");
+const TRANSCRIPT_DIR = path.join(ROOT, "apps/launcher/fixtures/transcripts");
+const DEFAULT_TRANSCRIPT = "seeded-leaky";
+const HINGLISH_TRANSCRIPT = "seeded-leaky-hinglish";
 const FIXTURE_KEY = "meera-launch";
 const PERSONA = "Meera's Kitchen — illustrative persona based on common home-bakery practices (not a real customer)";
 const BUDGET_USD = 1.5;
@@ -50,7 +52,14 @@ const KNOWN_ANSWERS: Record<string, string> = {
   "schedule.closedWeekdays": "Only Mondays are closed, every other day I work.",
   "fulfilment.pickup.enabled": "Yes, pickup from my place in Baner is free.",
 };
-const RUSH_CAP = "rush.maxRushUnitsPerDay";
+/** Same answers in the owner's Hinglish, used when the session language is hinglish. */
+const KNOWN_ANSWERS_HINGLISH: Record<string, string> = {
+  "orderRules.customRequests": "Agar koi custom design chahta hai toh pehle mujhse poochna.",
+  "schedule.closedWeekdays": "Sirf Monday ko chhutti hai, baaki har din main kaam karti hoon.",
+  "fulfilment.pickup.enabled": "Haan, Baner mein mere ghar se pickup free hai.",
+};
+let answerBook = KNOWN_ANSWERS;
+const RUSH_CAP ="rush.maxRushUnitsPerDay";
 const TYPED_RUSH = "typed-rush-cap";
 const RUSH_CAP_UNITS = 2;
 const GENERIC_ANSWER = "Please go with what I told you above; I have nothing more to add on this.";
@@ -100,7 +109,7 @@ function consistent(value: unknown, quote: string): boolean {
 async function clarify(api: Api, sessionId: string, questions: { id: string; path: string; text: string }[]): Promise<string> {
   const kept = questions.filter((q) => !isOmitted(q.path));
   const held = questions.filter((q) => isOmitted(q.path));
-  let answers = kept.map((q) => ({ questionId: q.id, text: KNOWN_ANSWERS[q.path] ?? GENERIC_ANSWER }));
+  let answers = kept.map((q) => ({ questionId: q.id, text: answerBook[q.path] ?? GENERIC_ANSWER }));
   let note = `answered ${kept.length}, left ${held.length} omitted-rule question(s) unanswered (${held.map((q) => q.path).join(", ") || "none asked"})`;
   if (answers.length === 0 && held[0]) {
     answers = [{ questionId: held[0].id, text: NOT_SURE }];
@@ -259,7 +268,18 @@ async function listen(app: ReturnType<typeof createApp>): Promise<{ server: Serv
   });
 }
 
+function transcriptName(): string {
+  const i = process.argv.indexOf("--transcript");
+  if (i < 0) return DEFAULT_TRANSCRIPT;
+  const name = process.argv[i + 1] ?? "";
+  if (!/^[a-z0-9-]+$/.test(name) || !existsSync(path.join(TRANSCRIPT_DIR, `${name}.txt`))) return stop(`unknown --transcript "${name}"`);
+  return name;
+}
+
 async function main(): Promise<void> {
+  const name = transcriptName();
+  const language = name === HINGLISH_TRANSCRIPT ? "hinglish" : "en";
+  answerBook = language === "hinglish" ? KNOWN_ANSWERS_HINGLISH : KNOWN_ANSWERS;
   const replay = process.argv.includes("--replay");
   const fresh = process.argv.includes("--fresh");
   const mode: LlmMode = replay ? "replay" : "record";
@@ -272,12 +292,12 @@ async function main(): Promise<void> {
   const { server, base } = await listen(createApp({ client, store }));
   try {
     const api = makeApi(base);
-    const transcript = readFileSync(TRANSCRIPT, "utf8").trim();
-    const { sessionId } = await api.call<{ sessionId: string }>("POST", "/api/session", { language: "hinglish", transcript, fixtureKey: FIXTURE_KEY });
+    const transcript = readFileSync(path.join(TRANSCRIPT_DIR, `${name}.txt`), "utf8").trim();
+    const { sessionId } = await api.call<{ sessionId: string }>("POST", "/api/session", { language, transcript, fixtureKey: FIXTURE_KEY });
     mkdirSync(AGENTDOOR_DIR, { recursive: true });
     writeFileSync(STATE_FILE, `${JSON.stringify({ sessionId, liveSessionId: replay ? liveSessionId : sessionId })}\n`);
     const usagePath = replay ? replayUsage(liveSessionId, sessionId) : DEFAULT_USAGE_PATH;
-    log(`1. described (${transcript.length} chars of Hinglish); session ${sessionId}`);
+    log(`1. described (${transcript.length} chars, language ${language}, transcript ${name}); session ${sessionId}`);
 
     const round0 = await api.call("POST", `/api/session/${sessionId}/compile`);
     const questions = round0.compileResult.questions as { id: string; path: string; text: string }[];

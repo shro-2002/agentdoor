@@ -3,16 +3,16 @@
 Keep this under ~150 lines. Newest entries on top within each section. Each task appends ≤10 lines.
 
 ## Now
-- Phase: **IMPLEMENTATION READY**. T01 live-platform spike done (2026-11-19): all feasibility risks cleared (MCP via CDN, MySQL, domain + HTTPS, mail both ways, proxy, persistence).
-- Next: (T12 done) T13 live launch, video, submit. The public challenge page lists the build window as ending 20 Nov 11:59 PM IST; the kickoff brief's exact submission time is still unconfirmed, so aim for 18:00 IST.
-- Core engine, signing, rehearsal, the shop and the deploy script exist. The shop is LIVE on https://agentdoor.shop with a stand-in signed bundle (bakery fixture); the real launch bundle comes from T08/T13. Shop UI is bare (T11).
-- Deadline: Fri 20 Nov 2026. Exact submission time: **UNCONFIRMED**. Assume 18:00 IST.
-- Reviews remaining: **R2** (after T06) and **R4** (before submit). No further architecture reviews unless a fatal feasibility blocker appears.
+- Phase: **SUBMISSION PREPARATION** (19 Nov 2026). The real Hinglish launch bundle (Meera's Kitchen, illustrative persona) is live on https://agentdoor.shop and the shop UI is styled.
+- Remaining: demo video, GitHub repository, submission.
+- Deadline: the public challenge page lists the submission time as 20 Nov 2026, 11:59 PM IST. Aim to submit well before it.
+- Tests: 464 unit and integration, 54 end-to-end, all passing. Public documents were reconciled with the live site on 19 Nov (see Review findings, R4).
+- Reviews done: **R2** (three-reviewer shop review) and **R4** (judge-style submission audit). No further reviews planned.
 
 ## Platform facts (public-safe; account details live in private account notes)
 | Item | Value |
 |---|---|
-| Submission deadline (exact) | UNCONFIRMED |
+| Submission deadline | 20 Nov 2026, 11:59 PM IST (public challenge page) |
 | MCP via CDN (curl / Claude.ai connector / Claude Code) | all three work (stateless streamable HTTP, no auth); SSE not buffered (1 s ticks) |
 | `DB_*` present; MySQL version / `max_connections` | present; MySQL 8.4.8-8, 200; `FOR UPDATE` txn OK |
 | Proxy topology → `trust proxy` value | **1**. Edge appends real IP as last `X-Forwarded-For`, keeps client values; `CF-Connecting-IP` unforgeable (spoof → error 1000). Key on `req.ip`. Confirmed on laptop and phone (mobile data) |
@@ -119,6 +119,8 @@ Summary: 18 ticked, 0 live-check, 1 n/a (SEC-18). Nothing needed a live command.
 
 ## Review findings (R0–R4)
 <!-- ID — gate — severity — finding — fix task — status -->
+R2 run 2026-11-19: independent three-reviewer security and conformance review of the shop. Found no critical issue; its ten fixes are in (T06b).
+R4 run 2026-11-19: independent judge-style audit of the submission. Score about 70 of 100 before fixes. Fixes (all in): numbers and provenance wording made consistent across pages and documents, contact address hello@agentdoor.shop shown on /contact and in the footer, replay wording on /try, friendly 404 page, MIT license, account details removed from public notes, deploy bug (publish must follow every upload), launch report rate limit. Documents reconciled with the live site afterwards (T13f).
 R0 run 2026-11-18 19:10 IST. Verdict: **CONDITIONAL GO**. All P0 fixes applied to planning docs 2026-11-18 ~20:15 IST.
 - R0-1 — P0 — Judges can't experience the launcher: public URL is only the storefront. Fix: public replay-mode launcher at `/try` on the same app + storefront ribbon + mandatory video. Tasks T09/T10/T12. — fixed in docs
 - R0-2 — P0 — Schedule over-subscribed (lane A ≈ 18 h on paper, no slack). Fix: apply cuts now (merge launcher to 4 pages, drop S3 polling/S6/QR/capacity bars/`get_order_status`/Haiku explain, linear deploy script, 1 clarify round, R1+R3 skipped). — fixed in docs
@@ -132,6 +134,7 @@ R0 run 2026-11-18 19:10 IST. Verdict: **CONDITIONAL GO**. All P0 fixes applied t
 
 ## Open issues / requests between lanes
 <!-- lane B → lane A core change requests go here -->
+- T13f — 2026-11-19 — done — final documentation pass (docs only): README, docs/BRIEF.md, docs/demo-script.md and this file updated to the measured facts of the live Hinglish launch (3 calls, $0.1467; 10 critical gaps on the first run, 3 after typed fixes, final 0; deploy 10 steps, 30.3 s; 464 unit/integration and 54 e2e tests). Provenance wording corrected (stated rules carry her quoted words; defaults labelled as suggested by AgentDoor). Limitations list completed. Demo order today: eggless vanilla cake, Tuesday 24 Nov, Hinjewadi, under Rs 900 (quote Rs 800); the demo script now has a date re-check step.
 - T13c — 2026-11-19 — **done** — submission docs: README.md, docs/BRIEF.md, docs/architecture.svg, docs/demo-script.md (docs only, no code changed).
 
 - T13d — 2026-11-19 — done — audit fixes: (1) page titles never repeat the shop name (home = "<Shop> · Order online"); (2) owner mailbox (CONTACT_FORM_RECIPIENT_EMAIL) as mailto on /contact and footer; (3) ribbon/footer link renamed "Replay the launch", /try says it is a recording with LIVE blocks computed now; (4) friendly HTML 404 for browsers (JSON kept for /api, /mcp, /.well-known), /robots.txt; (5) `REPO_URL` in `views/site.ts` (empty: fill later); (6) MIT LICENSE.

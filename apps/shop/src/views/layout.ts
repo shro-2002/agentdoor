@@ -1,4 +1,5 @@
 import { html, icon, raw, type SafeHtml } from "@agentdoor/ui";
+import { personaNote } from "./persona.js";
 
 export type NavKey = "menu" | "order" | "contact" | "report";
 
@@ -68,6 +69,7 @@ function footer(shop: ShopIdentity): SafeHtml {
         <p>Prices are set by the owner. Quotes are signed, so nobody can change them afterwards.</p>
         <p><a href="/launch-report">How this shop was checked</a> · <a href="/try">Try AgentDoor</a></p>
       </div>
+      <div class="site-foot__note">${personaNote()}</div>
     </div>
   </footer>`;
 }
@@ -94,6 +96,7 @@ export function layout(o: LayoutOptions): string {
 ${ribbon}
 ${o.banner ? html`<p class="banner-closed" role="alert">${icon("alert")}<strong>${o.banner}</strong></p>` : ""}
 ${tryMode ? (o.tryNav ?? "") : siteHeader(shop, o.active)}
+${tryMode ? html`<div class="wrap">${personaNote()}</div>` : ""}
 <main id="main" tabindex="-1">
 ${o.body}
 </main>

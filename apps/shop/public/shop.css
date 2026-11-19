@@ -1752,3 +1752,7 @@ p.alert {
   aspect-ratio: auto;
   min-height: 180px;
 }
+
+/* Honesty label: calm, readable, not a warning. */
+.persona-note { margin: 0.5rem 0; font-size: 0.875rem; font-style: italic; }
+.site-foot__note { grid-column: 1 / -1; }

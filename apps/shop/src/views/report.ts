@@ -4,6 +4,7 @@ import type { LaunchState } from "../db/launch-state.js";
 import { isoDay } from "./format.js";
 import { gapTitle } from "./gap-words.js";
 import { layout } from "./layout.js";
+import { personaNote } from "./persona.js";
 import { ruleGroups } from "./rules-view.js";
 import { bannerFor, identityOf } from "./storefront.js";
 
@@ -115,6 +116,7 @@ export function launchReportPage(launch: LaunchState, publicBaseUrl: string): st
   const body = html`<section class="report-hero">
       <div class="wrap">
         <p class="eyebrow">Launch report</p>
+        ${personaNote()}
         <h1 class="hero__title">How ${policy.business.name} was prepared for launch</h1>
         <p class="hero__lead">${owner} described the business in their own words. AgentDoor wrote the rules down, ${owner} approved each one, and a rehearsal tried to break them before any customer could.</p>
         ${summary(record, rows.length, fixed)}

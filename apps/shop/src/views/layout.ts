@@ -5,6 +5,7 @@ import { ownerFooter, ownerHeader, ownerRibbon } from "./chrome/owner.js";
 import type { ShopIdentity } from "./chrome/shared.js";
 import { personaNote } from "./persona.js";
 import { REPO_URL, getOwnerContact } from "./site.js";
+import { assetUrl } from "./asset-url.js";
 
 export { contactLink, type ShopIdentity } from "./chrome/shared.js";
 
@@ -52,13 +53,13 @@ const FONT_CSS = {
 /** Each page loads one look only, so every page stays far under the CSS budget. */
 function styles(chrome: Chrome, extra: string[] = []): SafeHtml {
   if (chrome === "owner") {
-    return html`<link rel="stylesheet" href="/assets/tokens.css"><link rel="stylesheet" href="/assets/ui.css"><link rel="stylesheet" href="/assets/shop.css">`;
+    return html`<link rel="stylesheet" href="${assetUrl("tokens.css")}"><link rel="stylesheet" href="${assetUrl("ui.css")}"><link rel="stylesheet" href="${assetUrl("shop.css")}">`;
   }
-  const more = extra.map((f) => html`<link rel="stylesheet" href="/assets/${f}">`);
+  const more = extra.map((f) => html`<link rel="stylesheet" href="${assetUrl(f)}">`);
   const own =
     chrome === "bakery"
-      ? html`<link rel="stylesheet" href="/assets/bakery.css">${more}`
-      : html`<link rel="stylesheet" href="/assets/ui.css"><link rel="stylesheet" href="/assets/agentdoor.css">${more}`;
+      ? html`<link rel="stylesheet" href="${assetUrl("bakery.css")}">${more}`
+      : html`<link rel="stylesheet" href="${assetUrl("ui.css")}"><link rel="stylesheet" href="${assetUrl("agentdoor.css")}">${more}`;
   return html`<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="${FONT_CSS[chrome]}">${own}`;
 }
@@ -117,7 +118,7 @@ ${head}
 ${o.body}
 </main>
 ${foot}
-${(o.scripts ?? []).map((s) => html`<script src="/assets/${s}" defer></script>`)}
+${(o.scripts ?? []).map((s) => html`<script src="${assetUrl(s)}" defer></script>`)}
 </body>
 </html>`.value;
 }

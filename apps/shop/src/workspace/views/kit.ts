@@ -1,5 +1,6 @@
 import { html, raw, type SafeHtml } from "@agentdoor/ui";
 import { brandMark } from "./icons.js";
+import { assetUrl } from "../../views/asset-url.js";
 
 export const FONT_URL = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap";
 
@@ -24,12 +25,12 @@ ${o.noindex === false ? "" : raw('<meta name="robots" content="noindex">')}
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="${FONT_URL}">
-<link rel="stylesheet" href="/assets/workspace.css">
+<link rel="stylesheet" href="${assetUrl("workspace.css")}">
 </head>
 <body class="${o.bodyClass ?? ""}">
 <a class="skip" href="#main">Skip to the content</a>
 ${o.body}
-<script src="/assets/workspace.js" defer></script>
+<script src="${assetUrl("workspace.js")}" defer></script>
 </body>
 </html>`.value;
 }

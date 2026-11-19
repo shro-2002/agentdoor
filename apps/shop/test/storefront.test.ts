@@ -146,7 +146,7 @@ describe("order page (/order)", () => {
     expect(html).toMatch(/<input type="radio" name="fulfilment" value="pickup"/);
     expect(html).toMatch(/<input type="radio" name="fulfilment" value="delivery"/);
     expect(html).toContain("Your order");
-    expect(html).toContain('<script src="/assets/shop.js" defer></script>');
+    expect(html).toMatch(/<script src="\/assets\/shop\.js\?v=[0-9a-f]{10}" defer><\/script>/);
     expect(html).not.toMatch(/\sstyle=/);
   });
 

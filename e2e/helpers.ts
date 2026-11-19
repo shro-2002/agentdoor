@@ -1,11 +1,14 @@
 import { expect, type Page } from "@playwright/test";
 
+const FONT_HOSTS = /^https:\/\/fonts\.(googleapis|gstatic)\.com\//;
+
 /** Collects CSP violations and page errors so a spec can assert the pages are clean. */
 export function watchConsole(page: Page): string[] {
   const problems: string[] = [];
   page.on("pageerror", (e) => problems.push(`pageerror: ${e.message}`));
   page.on("console", (m) => {
-    if (m.type() === "error") problems.push(`console: ${m.text()}`);
+    // A web font that cannot be fetched (offline test machine) is a network failure, not an app error.
+    if (m.type() === "error" && !FONT_HOSTS.test(m.location().url)) problems.push(`console: ${m.text()}`);
   });
   return problems;
 }

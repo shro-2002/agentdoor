@@ -59,7 +59,7 @@ async function laterDate(page: Page): Promise<string> {
 /** The whole human order flow through the real pages. Returns the private status-page URL. */
 export async function placeOrderViaPages(page: Page, who = "Asha Test"): Promise<string> {
   await page.goto(`${SHOP()}/`);
-  await page.getByRole("link", { name: /^Order for / }).click();
+  await page.getByRole("link", { name: /^Order a cake/ }).first().click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Order from");
   await page.locator("input.qty__input").first().fill("1");
   await page.locator("#date").fill(await laterDate(page));

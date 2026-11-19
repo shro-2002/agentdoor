@@ -37,7 +37,8 @@ for (const { w, h } of SIZES) {
 
     await page.goto(`${SHOP()}/order`);
     await page.locator("input.qty__input").first().fill("1");
-    await page.locator("#date").fill((await page.locator("#date").getAttribute("min"))!);
+    await page.locator("#date").evaluate((el: HTMLInputElement) => el.removeAttribute("min"));
+    await page.locator("#date").fill(new Date().toISOString().slice(0, 10));
     await page.getByRole("button", { name: "Get my quote" }).click();
     await expect(page.locator("#problems")).toBeVisible();
     await shot(page, "s2-refused", w);

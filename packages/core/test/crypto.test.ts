@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  decodeQuoteToken,
   generateKeyPair,
   signLaunchRecord,
   signQuoteToken,
@@ -63,6 +64,23 @@ describe("quote token", () => {
   it("garbage public key never throws", () => {
     const t = signQuoteToken(payload(), keys.privateKey);
     expect(verifyQuoteToken(t, "not-a-key", ctx)).toEqual({ ok: false, code: "QUOTE_INVALID" });
+  });
+});
+
+describe("decodeQuoteToken (signature and shape only)", () => {
+  it("returns the payload of an expired, stale-policy token: freshness is the caller's call", () => {
+    const t = signQuoteToken(payload(), keys.privateKey);
+    expect(decodeQuoteToken(t, keys.publicKey)).toEqual({ ok: true, payload: payload() });
+    expect(verifyQuoteToken(t, keys.publicKey, { currentPolicyHash: "b".repeat(64), nowSec: NOW + 9999 }).ok).toBe(false);
+  });
+  it("refuses a bad signature, another key, a wrong shape and garbage", () => {
+    const t = signQuoteToken(payload(), keys.privateKey);
+    const tampered = tamper(t, (p) => (p.totalPaise -= 1));
+    const other = signQuoteToken(payload(), generateKeyPair().privateKey);
+    const noQid = signQuoteToken({ ...payload(), qid: 5 } as unknown as QuoteTokenPayload, keys.privateKey);
+    for (const bad of [tampered, other, noQid, "", "a.b.c", "x."])
+      expect(decodeQuoteToken(bad, keys.publicKey)).toEqual({ ok: false, code: "QUOTE_INVALID" });
+    expect(decodeQuoteToken(t, "not-a-key")).toEqual({ ok: false, code: "QUOTE_INVALID" });
   });
 });
 

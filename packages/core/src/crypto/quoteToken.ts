@@ -54,6 +54,22 @@ function decodePayload(body: string): QuoteTokenPayload | null {
 }
 
 /**
+ * Signature and shape only: no expiry, no policy check. The shop uses it to recognise a retry of an
+ * order that already exists (idempotency) before it decides whether the quote is still fresh.
+ */
+export function decodeQuoteToken(
+  token: string,
+  publicKeyB64: string,
+): { ok: true; payload: QuoteTokenPayload } | { ok: false; code: "QUOTE_INVALID" } {
+  const parts = typeof token === "string" ? token.split(".") : [];
+  if (parts.length !== 2) return { ok: false, code: "QUOTE_INVALID" };
+  const [body, sig] = parts as [string, string];
+  if (!verifyUtf8(body, sig, publicKeyB64)) return { ok: false, code: "QUOTE_INVALID" };
+  const payload = decodePayload(body);
+  return payload ? { ok: true, payload } : { ok: false, code: "QUOTE_INVALID" };
+}
+
+/**
  * Order matters: the signature is checked before anything in the payload is trusted;
  * expiry before staleness so an old quote reports the more useful reason.
  */
@@ -62,12 +78,9 @@ export function verifyQuoteToken(
   publicKeyB64: string,
   ctx: { currentPolicyHash: string; nowSec: number },
 ): QuoteVerifyResult {
-  const parts = typeof token === "string" ? token.split(".") : [];
-  if (parts.length !== 2) return { ok: false, code: "QUOTE_INVALID" };
-  const [body, sig] = parts as [string, string];
-  if (!verifyUtf8(body, sig, publicKeyB64)) return { ok: false, code: "QUOTE_INVALID" };
-  const payload = decodePayload(body);
-  if (!payload) return { ok: false, code: "QUOTE_INVALID" };
+  const decoded = decodeQuoteToken(token, publicKeyB64);
+  if (!decoded.ok) return decoded;
+  const { payload } = decoded;
   if (ctx.nowSec >= payload.exp) return { ok: false, code: "QUOTE_EXPIRED" };
   if (payload.policyHash !== ctx.currentPolicyHash)
     return { ok: false, code: "QUOTE_STALE_POLICY" };

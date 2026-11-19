@@ -75,47 +75,17 @@ export function earliestDate(policy: BusinessPolicy, nowMs: number): string | nu
   return null;
 }
 
-export interface PlainRule {
-  title: string;
-  text: string;
-  icon: "clock" | "door" | "truck" | "rupee" | "check" | "receipt";
-}
-
-const listWords = (items: string[]): string =>
+export const listWords = (items: string[]): string =>
   items.length <= 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
 
-/** The owner's rules in plain words, straight from the policy: nothing here is hand-written per shop. */
-export function plainRules(policy: BusinessPolicy): PlainRule[] {
-  const { schedule, rush, orderRules, cancellation, capacity, fulfilment } = policy;
-  const rules: PlainRule[] = [
-    { icon: "clock", title: "Notice", text: `Order at least ${spanOfHours(schedule.minLeadHours)} ahead, and up to ${schedule.maxAdvanceDays} days in advance.` },
-  ];
-  const slow = policy.catalog.filter((i) => i.prepHours > schedule.minLeadHours);
-  if (slow.length > 0) {
-    rules.push({ icon: "clock", title: "Made to order", text: `${listWords(slow.map((i) => i.name.en))} need ${spanOfHours(Math.max(...slow.map((i) => i.prepHours)))} to make.` });
-  }
-  const closedDays = schedule.closedWeekdays.map((d) => `${WEEKDAYS[d]}s`);
-  rules.push({
-    icon: "door",
-    title: "Closed days",
-    text: closedDays.length > 0 ? `Closed on ${listWords(closedDays)}. Orders cannot be collected or delivered then.` : "Open every day of the week.",
-  });
-  rules.push({ icon: "receipt", title: "Daily limit", text: `About ${capacity.unitsPerDay} units of baking a day. When a day is full the shop says so, it never overbooks.` });
-  if (rush) {
-    const fee = rush.surcharge.kind === "flat" ? inr(rush.surcharge.paise) : `${rush.surcharge.bp / BP_PER_PERCENT}%`;
-    rules.push({ icon: "clock", title: "Rush orders", text: `Need it within ${spanOfHours(rush.withinHours)}? Rush adds ${fee}, for up to ${rush.maxRushUnitsPerDay} units a day.` });
-  }
-  rules.push({ icon: "rupee", title: "Minimum order", text: orderRules.minOrderPaise > 0 ? `${inr(orderRules.minOrderPaise)} before delivery and extras.` : "No minimum order." });
-  if (fulfilment.delivery.enabled && fulfilment.delivery.areas.length > 0) {
-    const areas = fulfilment.delivery.areas.map((a) => `${a.name} ${a.feePaise === 0 ? "(free)" : inr(a.feePaise)}`);
-    const other = fulfilment.delivery.unlistedArea === "REFUSE" ? "Other areas are not served." : "Other areas: the owner decides first.";
-    rules.push({ icon: "truck", title: "Delivery", text: `${listWords(areas)}. ${other}` });
-  }
-  rules.push({ icon: "check", title: "Custom requests", text: orderRules.customRequests === "REFUSE" ? "Only what is on the menu. Custom designs are not taken." : "Custom requests are welcome, but the owner decides first." });
-  rules.push({ icon: "check", title: "Cancelling", text: `Free cancellation up to ${spanOfHours(cancellation.freeCancelHours)} before.` });
-  rules.push({ icon: "check", title: "Prices", text: `Fixed. No haggling and no discounts. A quote stays valid for ${orderRules.quoteValidityMinutes} minutes.` });
-  return rules;
-}
+type Rush = NonNullable<BusinessPolicy["rush"]>;
+
+/** The rush charge as the policy states it: "₹200" for a flat fee, "15%" for a percentage. */
+export const rushFee = (rush: Rush): string => (rush.surcharge.kind === "flat" ? inr(rush.surcharge.paise) : `${rush.surcharge.bp / BP_PER_PERCENT}%`);
+
+/** "Free" or the fee: one wording for every delivery area. */
+export const areaFee = (feePaise: number): string => (feePaise === 0 ? "Free" : inr(feePaise));
+
 
 /** One short sentence for the footer. */
 export function hoursLine(policy: BusinessPolicy): string {

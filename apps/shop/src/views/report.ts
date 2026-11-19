@@ -7,7 +7,6 @@ import { gapTitle } from "./gap-words.js";
 import { layout } from "./layout.js";
 import { personaNote } from "./persona.js";
 import { ruleGroups } from "./rules-view.js";
-import { bannerFor, identityOf } from "./storefront.js";
 
 type GapRow = LaunchRecord["rehearsal"]["gapsFound"][number];
 
@@ -127,7 +126,7 @@ export function launchReportPage(launch: LaunchState, publicBaseUrl: string, ext
   if (!launch.launched) {
     const body = html`<section class="wrap section narrow"><h1 class="page-title">Launch report</h1>
       <p class="alert alert--error" role="alert">${icon("alert")}<span>This shop has not been launched, so there is no report to show. Reason: ${launch.reason}.</span></p></section>`;
-    return layout({ title: "Launch report", body, banner: bannerFor(launch), active: "report" });
+    return layout({ title: "Launch report", body, chrome: "agentdoor", styles: ["agentdoor-try.css"], active: "report" });
   }
   const { policy, record } = launch;
   const rows = record.rehearsal.gapsFound;
@@ -161,7 +160,8 @@ export function launchReportPage(launch: LaunchState, publicBaseUrl: string, ext
   return layout({
     title: "Launch report",
     body,
-    shop: identityOf(launch),
+    chrome: "agentdoor",
+    styles: ["agentdoor-try.css"],
     active: "report",
     description: `How ${policy.business.name} was rehearsed and signed before launch: the owner's rules, the gaps found and fixed, and the policy fingerprint.`,
   });

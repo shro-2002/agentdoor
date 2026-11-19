@@ -4,7 +4,7 @@ import type { ContactMessage, DashboardOrder } from "../db/queries.js";
 import { inr, shortDate } from "./format.js";
 import { layout } from "./layout.js";
 
-/** Owner pages are private tools, not storefront: they keep the ribbon but not the shop header links to ordering. */
+/** Owner pages are private tools, not storefront: they keep the original shop chrome. */
 
 export function loginPage(error?: string): string {
   const body = html`<section class="wrap section login">
@@ -21,7 +21,7 @@ export function loginPage(error?: string): string {
       <p class="hint">Customers never see this page. Too many wrong tries pause sign-in for a while.</p>
     </div>
   </section>`;
-  return layout({ title: "Owner sign in", body });
+  return layout({ title: "Owner sign in", body, chrome: "owner" });
 }
 
 /* ---------- dashboard ---------- */
@@ -119,5 +119,5 @@ export function dashboardPage(all: DashboardOrder[], contacts: ContactMessage[],
       </aside>
     </div>
   </section>`;
-  return layout({ title: "Owner dashboard", body, shop: launch.launched ? { name: launch.policy.business.name } : undefined });
+  return layout({ title: "Owner dashboard", body, chrome: "owner", shop: launch.launched ? { name: launch.policy.business.name } : undefined });
 }

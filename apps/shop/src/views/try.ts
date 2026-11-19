@@ -13,6 +13,7 @@ import {
   stepTimeline,
   type SafeHtml,
 } from "@agentdoor/ui";
+import { adBrand } from "./chrome/agentdoor.js";
 import { quoteEvidenceFigures, type RunFigures } from "../services/figures.js";
 import type { GateCheck, LiveRun } from "../services/try-live.js";
 import { decisionFor } from "../services/try-live.js";
@@ -42,7 +43,7 @@ function tryNav(active: TryStep | "intro"): SafeHtml {
   const at = STEPS.findIndex((s) => s.id === active);
   return html`<nav class="trynav" aria-label="Replay navigation">
     <div class="wrap trynav__row">
-      <a class="trynav__brand" href="/try">${icon("door")}<span>AgentDoor replay</span></a>
+      ${adBrand()}
       <ul class="trynav__links">
         <li><a href="/">Storefront</a></li>
         <li><a href="/launch-report">Launch report</a></li>
@@ -55,13 +56,13 @@ function tryNav(active: TryStep | "intro"): SafeHtml {
   </nav>`;
 }
 
-function page(title: string, active: TryStep | "intro", body: SafeHtml, shopName?: string): string {
+function page(title: string, active: TryStep | "intro", body: SafeHtml): string {
   return layout({
     title,
     body,
-    chrome: "try",
-    tryNav: tryNav(active),
-    shop: shopName ? { name: shopName } : undefined,
+    chrome: "agentdoor",
+    styles: ["agentdoor-try.css"],
+    nav: tryNav(active),
     bodyClass: "try",
     description: "A public replay of AgentDoor: a real recorded Claude session plus rule checks that run live on this page. No key, no account, no cost.",
   });

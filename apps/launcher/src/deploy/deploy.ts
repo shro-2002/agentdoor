@@ -359,8 +359,8 @@ class Deployer {
   // --- publish, domain ---------------------------------------------------------------------------
 
   private async publish(hash: string, baseUrl: string): Promise<void> {
-    const live = await readHealth(this.fetchFn, baseUrl);
-    if (live?.launched && live.policyHash === hash) return this.mark("publish", "skipped");
+    // Every run uploads a fresh build first, so publishing must always follow: the policy hash alone
+    // cannot tell whether the live site already serves THIS build (a new /try session or UI fix keeps it).
     const started = dataOf(await this.call(cmd.publish(this.appId)));
     const opId = str(started.operationId);
     if (opId) await this.waitOperation(opId);

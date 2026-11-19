@@ -119,13 +119,15 @@ describe("I-DEP-2 resume after a failure", () => {
     expect(env.readState().created).toBe(1);
   });
 
-  it("a fully deployed shop is a no-op rerun (no publish, secrets or create)", async () => {
+  it("a rerun of a fully deployed shop publishes the fresh upload again (same policy hash) but never creates an app or re-sets secrets", async () => {
     await deploy(opts());
     const before = env.readState().calls.length;
     const res = await deploy(opts());
     const second = env.readState().calls.slice(before).map((c) => c.slice(0, 3).join(" "));
-    expect(second.filter((c) => /publish|api call|create/.test(c))).toEqual([]);
-    expect(res.steps.publish).toBe("skipped");
+    expect(second.filter((c) => /api call|create/.test(c))).toEqual([]);
+    expect(second).toContain("hosting deployment publish");
+    expect(res.steps.publish).toBe("done");
+    expect(res.steps["secrets-publish"]).toBe("skipped");
   });
 
   it("failure at upload resumes at upload", async () => {

@@ -49,7 +49,9 @@ async function recordedSession() {
 describe("U-DEMO-1 export-demo writes a schema-valid DemoSession with no secrets and no PII", () => {
   it("writes bundle/try/session.json built from the stored session", async () => {
     const s = await recordedSession();
-    const session = exportDemo({ store: s.store, usagePath: s.usagePath }, { sessionId: s.id, bundleDir: s.bundleDir, secretsDir: s.secretsDir });
+    // An explicit, absent deploy log keeps this test independent of any real .agentdoor/deploy-log.json.
+    const noDeployLog = path.join(s.dir, "no-deploy-log.json");
+    const session = exportDemo({ store: s.store, usagePath: s.usagePath }, { sessionId: s.id, bundleDir: s.bundleDir, secretsDir: s.secretsDir, deployLogFile: noDeployLog });
     const file = path.join(s.bundleDir, "try", "session.json");
     expect(JSON.parse(readFileSync(file, "utf8"))).toEqual(session);
 

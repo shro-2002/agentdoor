@@ -1,11 +1,15 @@
 import type { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import {
   canonicalJson,
+  refusalCode,
+  reservationOf,
   sha256Hex,
   transition,
   type OrderEvent,
   type OrderStatus,
   type QuoteTokenPayload,
+  type Reservation,
+  type ReservationCaps,
 } from "@agentdoor/core";
 import { deriveAccessToken, newOrderId } from "./ids.js";
 import { isDuplicateKey, withTransaction } from "./tx.js";
@@ -21,8 +25,8 @@ export interface PlaceOrderInput {
   /** Already verified by the caller (signature, expiry, policy hash, engine re-check). */
   quote: QuoteTokenPayload;
   fulfilDate: string;
-  /** `policy.capacity.overrides[date] ?? unitsPerDay` and the rush cap, as parameters. */
-  capacity: { unitsCap: number; rushCap: number };
+  /** `capsFor(policy, date)`: the day's limit (or its override) and the rush limit, as parameters. */
+  capacity: ReservationCaps;
   customer: CustomerDetails;
   idempotencyKey: string;
   channel: "web" | "mcp";
@@ -105,18 +109,18 @@ export async function findReplay(pool: Pool, i: ReplayInput): Promise<PlaceOrder
   return prior ? replayExisting(prior, i) : null;
 }
 
-/** Why the single conditional UPDATE matched nothing: read the row it was guarding. */
+/** Why the single conditional UPDATE matched nothing: read the row it was guarding and ask the shared rule. */
 async function refusalReason(
   conn: PoolConnection,
   i: PlaceOrderInput,
-  units: number,
+  reservation: Reservation,
 ): Promise<"CAPACITY_FULL" | "RUSH_CAP_REACHED"> {
   const [rows] = await conn.query<RowDataPacket[]>(
-    "SELECT reserved_units FROM capacity_ledger WHERE fulfil_date = ?",
+    "SELECT reserved_units, rush_units FROM capacity_ledger WHERE fulfil_date = ?",
     [i.fulfilDate],
   );
-  const reserved = Number(rows[0]?.reserved_units ?? 0);
-  return reserved + units > i.capacity.unitsCap ? "CAPACITY_FULL" : "RUSH_CAP_REACHED";
+  const row = { reservedUnits: Number(rows[0]?.reserved_units ?? 0), rushUnits: Number(rows[0]?.rush_units ?? 0) };
+  return refusalCode(row, reservation, i.capacity);
 }
 
 async function insertOrderRows(
@@ -158,8 +162,8 @@ async function attemptPlace(
   i: PlaceOrderInput,
   requestHash: string,
 ): Promise<{ commit: boolean; value: Attempt }> {
-  const units = i.quote.capacityUnits;
-  const rushUnits = i.quote.isRush ? units : 0;
+  const reservation = reservationOf(i.quote.capacityUnits, i.quote.isRush);
+  const { units, rushUnits } = reservation;
   const orderId = newOrderId(i.nowMs);
   const access = deriveAccessToken(i.accessSecret, orderId);
   try {
@@ -175,7 +179,7 @@ async function attemptPlace(
       [units, rushUnits, i.fulfilDate, units, i.capacity.unitsCap, rushUnits, i.capacity.rushCap],
     );
     if (res.affectedRows === 0)
-      return { commit: false, value: { kind: "REFUSED", code: await refusalReason(conn, i, units) } };
+      return { commit: false, value: { kind: "REFUSED", code: await refusalReason(conn, i, reservation) } };
     await insertOrderRows(conn, i, orderId, access.hash, requestHash);
   } catch (err) {
     if (isDuplicateKey(err)) return { commit: false, value: { kind: "DUPLICATE" } };

@@ -2,7 +2,8 @@ import type { BusinessPolicy, RuleProvenance } from "../schema/policy.js";
 import { requiredPaths } from "./requiredPaths.js";
 import { makeGap, type Gap } from "./types.js";
 
-const UNBOUNDED_CAPACITY = 500;
+/** A daily limit this high (the schema maximum) means the owner set no real limit. */
+export const UNBOUNDED_CAPACITY = 500;
 const DIETARY_CLAIMS = {
   eggless: ["eggless", "egg-less", "egg free", "egg-free", "एगलेस"],
   vegan: ["vegan", "वीगन"],

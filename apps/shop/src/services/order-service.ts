@@ -1,6 +1,6 @@
 import {
   QuoteRequestSchema,
-  capacityOn,
+  capsFor,
   evaluate,
   fulfilmentInstantMs,
   decodeQuoteToken,
@@ -118,7 +118,7 @@ export async function placeOrder(ctx: ServiceContext, cmd: OrderCommand): Promis
     const result = await placeOrderInDb(ctx.pool, {
       quote,
       fulfilDate: date,
-      capacity: { unitsCap: capacityOn(policy, date), rushCap: policy.rush?.maxRushUnitsPerDay ?? 0 },
+      capacity: capsFor(policy, date),
       customer,
       idempotencyKey: cmd.idempotencyKey,
       channel: cmd.channel,

@@ -5,6 +5,8 @@ import { Rehearsals } from "../flows/rehearse.js";
 import { fail } from "./envelope.js";
 import { rehearseRouter, type RehearseRouteDeps } from "./rehearse.js";
 import { sessionRouter } from "./session.js";
+import { StubDeploys } from "./deploy-stub.js";
+import { uiRouter } from "./ui.js";
 
 const BODY_LIMIT = "64kb";
 const HTTP_CLIENT_ERROR_MIN = 400;
@@ -35,6 +37,7 @@ export function createApp(deps: RehearseRouteDeps): Express {
   app.use(express.json({ limit: BODY_LIMIT }));
   app.use("/api", sessionRouter(deps));
   app.use("/api", rehearseRouter(deps, new Rehearsals(deps)));
+  app.use("/api", uiRouter({ ...deps, mode: deps.client.mode }, new StubDeploys()));
   app.use(notFound);
   app.use(errorHandler);
   return app;

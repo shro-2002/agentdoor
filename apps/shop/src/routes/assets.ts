@@ -25,7 +25,17 @@ export function assetsRouter(dir: string = findPublicDir()): Router {
   const router = Router();
   router.use(
     "/assets",
-    express.static(dir, { index: false, dotfiles: "ignore", maxAge: ASSET_MAX_AGE, extensions: false }),
+    express.static(dir, {
+      index: false,
+      dotfiles: "ignore",
+      maxAge: ASSET_MAX_AGE,
+      extensions: false,
+      // Stylesheets and scripts keep their names across deploys, so browsers revalidate them (a cheap 304) instead of
+      // pairing new markup with a stale cached copy; photos keep the max-age.
+      setHeaders: (res, path) => {
+        if (/\.(css|js)$/.test(path)) res.setHeader("Cache-Control", "no-cache");
+      },
+    }),
   );
   router.get("/favicon.ico", (_req, res) => res.redirect(301, "/assets/favicon.svg"));
   return router;

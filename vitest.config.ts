@@ -14,6 +14,14 @@ export default defineConfig({
       },
       {
         test: {
+          name: "ui",
+          root: "packages/ui",
+          include: ["test/**/*.test.ts"],
+          environment: "node",
+        },
+      },
+      {
+        test: {
           name: "launcher",
           root: "apps/launcher",
           include: ["test/**/*.test.ts"],

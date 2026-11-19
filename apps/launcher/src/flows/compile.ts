@@ -279,7 +279,7 @@ export async function compileState(deps: Deps, session: Session): Promise<Compil
         throw new LauncherError("COMPILE_INVALID", COMPILE_FAILED_MESSAGE, HTTP_UNPROCESSABLE);
       throw e;
     });
-  const { data: api, usage, costUsd, fromFixture } = await call;
+  const { data: api, usage, costUsd, fromFixture, latencyMs } = await call;
 
   const out = interpret(api, session.turns, opts);
   if (!out.ok)
@@ -297,6 +297,7 @@ export async function compileState(deps: Deps, session: Session): Promise<Compil
     fromFixture,
     usage,
     costUsd,
+    latencyMs,
     raw: api,
     result: { ...rest, validation },
   });

@@ -5,6 +5,8 @@ private/
 .env
 .env.*
 !.env.example
+# generated launch bundle (T08 gate / export-demo); the final one is generated in T13
+/bundle/
 # build / deps
 node_modules/
 out/

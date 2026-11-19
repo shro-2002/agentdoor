@@ -7,6 +7,13 @@ import { renderDefaults } from "../flows/template.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 let cached: string | null = null;
+let cachedScenarios: string | null = null;
+
+/** Static scenarios system prompt; the policy summary and the owner's words go in the user turn. */
+export function scenariosSystemPrompt(): string {
+  cachedScenarios ??= readFileSync(path.join(HERE, "scenarios.md"), "utf8");
+  return cachedScenarios;
+}
 
 /**
  * Static compile system prompt (frozen so the prompt-cache prefix never changes). It carries no

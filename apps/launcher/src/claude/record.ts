@@ -10,12 +10,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { answerQuestions } from "../flows/clarify.js";
 import { compileSession } from "../flows/compile.js";
+import { loadScenarios } from "../flows/scenarios.js";
 import { scoreCompile, type Expected } from "../flows/score.js";
 import { FsStore } from "../store/fsStore.js";
 import { ClaudeClient, DEFAULT_FIXTURES_DIR, DEFAULT_USAGE_PATH } from "./client.js";
 import { fixturePath } from "./fixtures.js";
 
-const RECORD_BUDGET_USD = 1;
+/** New spend allowed in this run (override: AGENTDOOR_RECORD_BUDGET_USD); the total cap is what is already spent plus this. */
+const RECORD_BUDGET_USD = Number(process.env.AGENTDOOR_RECORD_BUDGET_USD ?? "1");
 const NAMES = ["seeded-leaky", "en", "hinglish", "hi"] as const;
 const FIXTURES_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../fixtures");
 const readText = (...p: string[]) => readFileSync(path.join(FIXTURES_ROOT, ...p), "utf8");
@@ -25,8 +27,13 @@ async function main(): Promise<void> {
     console.error("Refusing to run: set AGENTDOOR_LLM_MODE=record");
     process.exit(2);
   }
-  const recorder = new ClaudeClient({ mode: "record", maxUsdPerSession: RECORD_BUDGET_USD, maxUsdTotal: RECORD_BUDGET_USD });
   const replayer = new ClaudeClient({ mode: "replay" });
+  const alreadySpent = replayer.usageTotals().totalUsd;
+  const recorder = new ClaudeClient({
+    mode: "record",
+    maxUsdPerSession: RECORD_BUDGET_USD,
+    maxUsdTotal: alreadySpent + RECORD_BUDGET_USD,
+  });
   const pick = (fixtureId: string) => (existsSync(fixturePath(DEFAULT_FIXTURES_DIR, fixtureId)) ? replayer : recorder);
 
   for (const name of NAMES) {
@@ -39,6 +46,14 @@ async function main(): Promise<void> {
     console.log(`  questions: ${round0.compileResult.questions.map((q) => q.path).join(", ") || "(none)"}`);
     if (name !== "seeded-leaky") continue;
 
+    // T08: the one scenarios fixture, written against the first (leakiest) policy of the demo transcript.
+    const scenarios = await loadScenarios(
+      { client: pick(`scenarios/${name}`), store },
+      store.getSession(session.id),
+      round0.compileResult.policy,
+    );
+    console.log(`${name}/scenarios: ${scenarios.scenarios.length} scenarios, $${scenarios.costUsd.toFixed(4)}, from fixture: ${scenarios.fromFixture}`);
+
     const table = JSON.parse(readText("answers", "seeded-leaky.json")) as Record<string, string>;
     const answers = round0.compileResult.questions.flatMap((q) => (table[q.path] ? [{ questionId: q.id, text: table[q.path]! }] : []));
     console.log(`  answering ${answers.length} question(s)`);
@@ -46,7 +61,8 @@ async function main(): Promise<void> {
     const round1 = await answerQuestions({ client: pick(`compile/${name}/round1`), store }, session.id, answers);
     console.log(`${name}/round1: version ${round1.version}`);
   }
-  console.log(`recorded spend in usage log: $${recorder.usageTotals().totalUsd.toFixed(4)} (${DEFAULT_USAGE_PATH})`);
+  const spentNow = recorder.usageTotals().totalUsd;
+  console.log(`spend added by this run: $${(spentNow - alreadySpent).toFixed(4)}; usage log total $${spentNow.toFixed(4)} (${DEFAULT_USAGE_PATH})`);
 }
 
 main().catch((e: unknown) => {

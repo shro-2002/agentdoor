@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import express, { type ErrorRequestHandler, type Express, type RequestHandler } from "express";
 import { LauncherError } from "../claude/errors.js";
-import type { Deps } from "../flows/compile.js";
+import { Rehearsals } from "../flows/rehearse.js";
 import { fail } from "./envelope.js";
+import { rehearseRouter, type RehearseRouteDeps } from "./rehearse.js";
 import { sessionRouter } from "./session.js";
 
 const BODY_LIMIT = "64kb";
@@ -27,12 +28,13 @@ const errorHandler: ErrorRequestHandler = (err: unknown, _req, res, _next) => {
 };
 
 /** The launcher is bound to 127.0.0.1 by server.ts (T10); this builds the routes T07 owns. */
-export function createApp(deps: Deps): Express {
+export function createApp(deps: RehearseRouteDeps): Express {
   const app = express();
   app.disable("x-powered-by");
   app.use(withRequestId);
   app.use(express.json({ limit: BODY_LIMIT }));
   app.use("/api", sessionRouter(deps));
+  app.use("/api", rehearseRouter(deps, new Rehearsals(deps)));
   app.use(notFound);
   app.use(errorHandler);
   return app;

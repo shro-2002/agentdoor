@@ -73,6 +73,8 @@ export interface CallResult<T> {
   usage: Usage;
   costUsd: number;
   fromFixture: boolean;
+  /** Summed API wall time of the attempts (0 for fixtures recorded without it). */
+  latencyMs: number;
 }
 
 export interface ClaudeClientOptions {
@@ -175,7 +177,8 @@ export class ClaudeClient {
         promptHash: hash,
         attempts,
       });
-    return { data, usage, costUsd: cost, fromFixture: this.mode === "replay" };
+    const latencyMs = attempts.reduce((t, a) => t + (a.latencyMs ?? 0), 0);
+    return { data, usage, costUsd: cost, fromFixture: this.mode === "replay", latencyMs };
   }
 
   private replaySource<T>(c: ClaudeCall<T>, hash: string) {
@@ -199,7 +202,9 @@ export class ClaudeClient {
     return async (i: number, messages: Message[]): Promise<RecordedAttempt> => {
       const chars = c.system.length + JSON.stringify(schema).length + messages.reduce((n, m) => n + m.content.length, 0);
       this.guard.assertCanSpend(sessionId, estimateUsd(c.model, chars, c.maxTokens));
+      const startedAt = Date.now();
       const res = await this.sdkInstance().beta.messages.create(buildParams(c, schema, messages));
+      const latencyMs = Date.now() - startedAt;
       const attempt: RecordedAttempt = {
         rawText: res.content.map((b) => (b.type === "text" ? (b.text ?? "") : "")).join(""),
         stopReason: res.stop_reason,
@@ -210,6 +215,7 @@ export class ClaudeClient {
           cacheReadTokens: res.usage.cache_read_input_tokens ?? 0,
           cacheWriteTokens: res.usage.cache_creation_input_tokens ?? 0,
         },
+        latencyMs,
       };
       this.log.append({
         at: this.clock().toISOString(),

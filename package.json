@@ -19,6 +19,7 @@
     "launcher": "tsx apps/launcher/src/server.ts",
     "shop": "tsx apps/shop/src/server.ts",
     "deploy": "tsx scripts/deploy.ts",
+    "export-demo": "tsx apps/launcher/src/flows/exportDemoCli.ts",
     "record-fixtures": "AGENTDOOR_LLM_MODE=record tsx apps/launcher/src/claude/record.ts"
   },
   "devDependencies": {

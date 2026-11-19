@@ -9,6 +9,8 @@ export interface RecordedAttempt {
   stopReason: string | null;
   model: string;
   usage: Usage;
+  /** Wall time of the API call; absent in fixtures recorded before T08. */
+  latencyMs?: number;
 }
 
 export interface Fixture {

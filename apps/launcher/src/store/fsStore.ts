@@ -26,6 +26,8 @@ export interface NewSession {
 const SESSION_ID_RE = /^s_[a-f0-9]{12}$/;
 const ID_BYTES = 6;
 const POLICY_FILE = /^v(\d+)\.json$/;
+const RUN_ID_RE = /^r_[a-f0-9]{12}$/;
+const EXTRA_NAME_RE = /^[a-z-]{1,30}$/;
 
 export const DEFAULT_STORE_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -57,6 +59,15 @@ export class FsStore {
     };
     this.saveSession(session);
     return session;
+  }
+
+  /** Newest first. */
+  listSessions(): Session[] {
+    if (!existsSync(this.root)) return [];
+    return readdirSync(this.root)
+      .filter((d) => SESSION_ID_RE.test(d) && existsSync(path.join(this.root, d, "session.json")))
+      .map((d) => this.getSession(d))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
   getSession(id: string): Session {
@@ -94,6 +105,52 @@ export class FsStore {
 
   readCompile(id: string, version: number): unknown {
     return readJson(path.join(this.sessionDir(id), `compile-v${version}.json`));
+  }
+
+  /** Small per-session JSON documents (`fixes`, `scenarios`, `dismissals`); null when never written. */
+  readExtra<T>(id: string, name: string): T | null {
+    const file = this.extraFile(id, name);
+    return existsSync(file) ? (readJson(file) as T) : null;
+  }
+
+  writeExtra(id: string, name: string, value: unknown): void {
+    writeJson(this.extraFile(id, name), value);
+  }
+
+  private extraFile(id: string, name: string): string {
+    if (!EXTRA_NAME_RE.test(name)) throw new Error("bad store document name");
+    return path.join(this.sessionDir(id), `${name}.json`);
+  }
+
+  /** Rehearsal runs are append-only: `runs/<runId>.json`. */
+  writeRun(id: string, run: { runId: string }): void {
+    if (!RUN_ID_RE.test(run.runId)) throw new Error("bad run id");
+    writeJson(path.join(this.sessionDir(id), "runs", `${run.runId}.json`), run);
+  }
+
+  readRun<T>(id: string, runId: string): T | null {
+    if (!RUN_ID_RE.test(runId)) return null;
+    const file = path.join(this.sessionDir(id), "runs", `${runId}.json`);
+    return existsSync(file) ? (readJson(file) as T) : null;
+  }
+
+  listRuns<T extends { seq: number }>(id: string): T[] {
+    const dir = path.join(this.sessionDir(id), "runs");
+    if (!existsSync(dir)) return [];
+    return readdirSync(dir)
+      .filter((f) => f.endsWith(".json"))
+      .map((f) => readJson(path.join(dir, f)) as T)
+      .sort((a, b) => a.seq - b.seq);
+  }
+
+  /** The run's session, found by scanning (a poll URL carries only the run id). */
+  findRunSession(runId: string): string | null {
+    if (!RUN_ID_RE.test(runId) || !existsSync(this.root)) return null;
+    return (
+      readdirSync(this.root).find(
+        (d) => SESSION_ID_RE.test(d) && existsSync(path.join(this.root, d, "runs", `${runId}.json`)),
+      ) ?? null
+    );
   }
 }
 

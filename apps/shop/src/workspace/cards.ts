@@ -2,6 +2,7 @@ import { gapCategory, type BusinessPolicy, type GapCategory } from "@agentdoor/c
 import { DISMISS, fixOptions } from "../../../launcher/src/flows/gapFix.js";
 import { gapText } from "../../../launcher/src/flows/gapText.js";
 import type { RunGap, RunResult } from "../../../launcher/src/flows/rehearse.js";
+import { stakesFor, type Stake, type StakeContext } from "./stakes.js";
 import type { DraftState } from "./state.js";
 
 export interface IssueFix {
@@ -26,6 +27,8 @@ export interface IssueCard {
   /** Where the owner can edit the rule by hand, or null. */
   editHref: string | null;
   evidence: string[];
+  /** What is at stake, with its working; null when no engine quote of a concrete order gives one. */
+  stake: Stake | null;
 }
 
 interface Words {
@@ -160,9 +163,10 @@ function evidenceFor(gap: RunGap, run: RunResult, state: DraftState): string[] {
 }
 
 /** One card per finding, with the typed controls that fix it in place (no model involved). */
-export function buildCards(state: DraftState, base: string): IssueCard[] {
+export function buildCards(state: DraftState, base: string, stakeCtx: StakeContext): IssueCard[] {
   const { policy, run } = state;
   if (!policy || !run) return [];
+  const stakes = stakesFor(state, stakeCtx);
   return run.gaps.map((gap) => {
     const words = (WRITERS[gap.code] ?? ((g: RunGap, p: BusinessPolicy) => ({ request: g.example ?? "", wrong: gapText(g, p, "en").body, why: "", suggestion: "" })))(gap, policy, state);
     return {
@@ -179,6 +183,7 @@ export function buildCards(state: DraftState, base: string): IssueCard[] {
       })),
       editHref: editHref(gap.paths[0], base),
       evidence: evidenceFor(gap, run, state),
+      stake: stakes.get(gap.id) ?? null,
     };
   });
 }

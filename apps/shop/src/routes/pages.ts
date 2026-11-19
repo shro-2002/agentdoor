@@ -8,7 +8,8 @@ import { statusUrlFor } from "../services/order-service.js";
 import { runLive } from "../services/try-live.js";
 import { defaultBundleDir, sessionLoader } from "../services/try-session.js";
 import { launchReportPage } from "../views/report.js";
-import { storefrontPage } from "../views/storefront.js";
+import { howWeWorkPage, storefrontPage } from "../views/storefront.js";
+import { HOW_WE_WORK_PATH, wellKnownTrust } from "../views/trust.js";
 import { orderStatusPage } from "../views/status.js";
 import { assetsRouter } from "./assets.js";
 import { orderRouter } from "./order.js";
@@ -26,6 +27,12 @@ export function pagesRouter(ctx: ServiceContext, limiters: Limiters): Router {
   // The publish health probe hits `/` and needs a 200, launched or not.
   router.get("/", (_req, res) => {
     res.type("html").send(storefrontPage(ctx.launch));
+  });
+
+  router.get(HOW_WE_WORK_PATH, (req, res) => {
+    const page = howWeWorkPage(ctx.launch);
+    if (page === null) return sendError(req, res, "NOT_FOUND");
+    res.type("html").send(page);
   });
 
   const loadSession = sessionLoader(defaultBundleDir());
@@ -47,6 +54,7 @@ export function pagesRouter(ctx: ServiceContext, limiters: Limiters): Router {
       policyHash: launch.policyHash,
       publicKey: config.signingPublicKey,
       mcp: "/mcp",
+      rehearsal: wellKnownTrust(launch),
       launchRecord: launch.signed,
     });
   });

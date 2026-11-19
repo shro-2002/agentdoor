@@ -2,6 +2,7 @@ import { html, domId, type SafeHtml } from "@agentdoor/ui";
 import { DISMISS } from "../../../../launcher/src/flows/gapFix.js";
 import type { IssueCard, IssueFix } from "../cards.js";
 import type { ViewCtx } from "./frame.js";
+import { rupees } from "../money.js";
 import { icon } from "./icons.js";
 import { postForm } from "./kit.js";
 
@@ -55,6 +56,14 @@ function bubble(card: IssueCard): SafeHtml {
   return html`<figure class="bubble${real ? "" : " bubble--example"}"><span class="bubble__avatar">${icon("user")}</span><div><figcaption class="bubble__who">${real ? "A customer writes" : "For example"}</figcaption><blockquote class="bubble__text">${card.request}</blockquote></div></figure>`;
 }
 
+/** The rupee figure and the working beside it. Only drawn when an engine quote of a concrete order gives one. */
+const stakeLine = (card: IssueCard): SafeHtml =>
+  card.stake ? html`<p class="issue__stake"><strong>Money at stake: ${rupees(card.stake.paise)}</strong><span>${card.stake.line}</span></p>` : html``;
+
+/** Shown for a moment when a fix lands. `data-accept` lets the script tell "Accept" (nothing protected) from a real fix. */
+const resolvedPanel = (card: IssueCard): SafeHtml =>
+  html`<div class="issue__resolved" aria-hidden="true" data-accept="${DISMISS}">${icon("check")}<span>Resolved</span>${card.stake ? html`<span class="issue__protected">Protected: ${rupees(card.stake.paise)}</span><small class="issue__protected-how">${card.stake.line}</small>` : ""}</div>`;
+
 /** One finding: the customer's message, what would happen, why it matters, and the fix right there. */
 export function issueCard(ctx: ViewCtx, card: IssueCard): SafeHtml {
   return html`<article class="issue" id="${domId(`gap-${card.gapId}`)}">
@@ -62,9 +71,10 @@ export function issueCard(ctx: ViewCtx, card: IssueCard): SafeHtml {
       ${card.category === "scenario" ? "" : html`<h3 class="issue__title">${card.title}</h3>`}
       ${bubble(card)}
       <dl class="issue__facts"><div><dt>What would happen</dt><dd>${card.wrong}</dd></div>${card.why ? html`<div><dt>Why it matters</dt><dd>${card.why}</dd></div>` : ""}</dl>
+      ${stakeLine(card)}
       ${controls(ctx, card)}
       <details class="evidence"><summary>See details</summary><pre class="evidence__pre">${card.evidence.join("\n")}</pre></details>
     </div>
-    <div class="issue__resolved" aria-hidden="true">${icon("check")}<span>Resolved</span></div>
+    ${resolvedPanel(card)}
   </article>`;
 }

@@ -19,6 +19,14 @@ export interface CallLog {
   costUsd: number;
 }
 
+/** An issue the owner fixed, with what was at stake on it just before the fix (engine quotes only). */
+export interface ProtectedStake {
+  gapId: string;
+  title: string;
+  paise: number;
+  line: string;
+}
+
 /** Everything one draft remembers, stored as one JSON document in `ws_drafts.state`. */
 export interface DraftState {
   v: 1;
@@ -43,6 +51,8 @@ export interface DraftState {
   seenGaps: Record<string, { severity: "critical" | "warning"; code: string }>;
   /** Internal measurements only; never shown in the owner's screens. */
   calls: CallLog[];
+  /** Issues fixed by a rule change, with their stakes. Absent in drafts saved before this existed. */
+  protectedStakes?: ProtectedStake[];
 }
 
 export const emptyState = (description: string): DraftState => ({

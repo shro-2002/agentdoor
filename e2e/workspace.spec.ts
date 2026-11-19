@@ -19,8 +19,12 @@ const HEADING = "Turn the business in your head into a shop that's ready for its
 test.use({ reducedMotion: "reduce" });
 
 interface Shot {
-  /** Saved as docs/screens/v4-<name>-<width>.png; no name means check only. */
+  /** Saved as docs/screens/<prefix>-<name>-<width>.png; no name means check only. */
   name?: string;
+  /** "v4" for the original journey, "v5" for the busy-day and money screens. */
+  prefix?: string;
+  /** Grow the window to the page's height first, so the sticky header does not cover the content in a full-page photo. */
+  tall?: boolean;
   /** The visible part only (an open dialog) instead of the whole page. */
   viewportOnly?: boolean;
 }
@@ -50,7 +54,8 @@ async function check(page: Page, label: string, shot: Shot = {}): Promise<void> 
     expect(overflow, `${label} scrolls sideways at ${size.width}px: ${wide.join(" | ")}`).toBeLessThanOrEqual(0);
     // A framed storefront has no scripts (sandboxed), so axe cannot enter it: it is checked on its own page.
     expect(await seriousViolations(page, ["iframe"]), `${label} at ${size.width}px`).toEqual([]);
-    if (shot.name) await page.screenshot({ path: path.join(OUT, `v4-${shot.name}-${size.width}.png`), fullPage: !shot.viewportOnly });
+    if (shot.tall) await page.setViewportSize({ width: size.width, height: await page.evaluate(() => document.documentElement.scrollHeight) });
+    if (shot.name) await page.screenshot({ path: path.join(OUT, `${shot.prefix ?? "v4"}-${shot.name}-${size.width}.png`), fullPage: !shot.viewportOnly });
   }
   await page.setViewportSize(original);
 }
@@ -120,6 +125,60 @@ async function resolveEverything(page: Page, base: string): Promise<void> {
     await expect(page.locator(".is-resolved")).toHaveCount(0); // the page refreshed itself with the new state
   }
   throw new Error("could not clear the rehearsal");
+}
+
+/** Photographs one element at both widths into docs/screens/v5-<name>-<width>.png. */
+async function elementShots(page: Page, target: ReturnType<Page["locator"]>, name: string): Promise<void> {
+  for (const size of [DESKTOP, PHONE]) {
+    await page.setViewportSize(size);
+    // A window as tall as the page never scrolls, so the sticky header cannot cover the element.
+    await page.setViewportSize({ width: size.width, height: await page.evaluate(() => document.documentElement.scrollHeight) });
+    await target.screenshot({ path: path.join(OUT, `v5-${name}-${size.width}.png`) });
+  }
+  await page.setViewportSize(DESKTOP);
+}
+
+/** Your busiest day, the money at stake on the issue cards, and what a fix protected. */
+async function busyDayAndMoney(page: Page, base: string, shots: boolean): Promise<void> {
+  const name = (n: string): Shot => ({ name: shots ? n : undefined, prefix: "v5", tall: true });
+  await page.getByRole("button", { name: "Simulate a festival rush" }).click();
+  await expect(page.getByText("Oversold: 0")).toBeVisible();
+  await expect(page.getByText("A simulation using your rules. No real orders were placed.")).toBeVisible();
+  await expect(page.locator(".busy__stat")).toHaveCount(3);
+  await page.locator(".busy__all summary").click();
+  await expect(page.locator(".busy__order")).toHaveCount(50);
+  await check(page, "busy day, every order");
+  await page.locator(".busy__all summary").click();
+  await check(page, "busy day", name("rehearse-busyday"));
+
+  const stake = page.locator(".issue__stake").first();
+  await expect(stake).toContainText("Money at stake: ₹");
+  await expect(stake).toContainText("Order in this case:");
+  const card = page.locator(".issue", { has: stake }).first();
+  if (shots) await elementShots(page, card, "issue-stake");
+  await card.evaluate((el) => el.classList.add("is-resolved"));
+  await expect(card.locator(".issue__protected")).toContainText("Protected: ₹");
+  if (shots) await elementShots(page, card, "resolved-protected");
+  await page.goto(`${base}/rehearse`);
+
+  // No daily limit: the result says so in plain words and offers the fix right there.
+  await page.goto(`${base}/rules`);
+  await page.locator("#capacity-rules details.edit summary").click();
+  await page.locator("#cap").fill("500");
+  await page.locator("#capacity-rules").getByRole("button", { name: "Save" }).click();
+  await page.goto(`${base}/rehearse`);
+  await page.getByRole("button", { name: "Simulate a festival rush" }).click();
+  await expect(page.getByText("Is that possible for you?")).toBeVisible();
+  await check(page, "busy day without a limit", name("busyday-nocapacity"));
+  await page.locator("#busy-limit").fill("3");
+  await page.getByRole("button", { name: "Set a daily limit" }).click();
+  await expect(page.getByText("of 3 units booked")).toBeVisible();
+  await expect(page.getByText("Is that possible for you?")).toHaveCount(0);
+  await expect(page.getByText("Oversold: 0")).toBeVisible();
+  await expect(page.getByText(/Protected so far: ₹/)).toBeVisible();
+  await page.locator(".protected__list summary").click();
+  if (shots) await elementShots(page, page.locator(".hero-card"), "protected-total");
+  await check(page, "protected so far");
 }
 
 async function resolveCard(card: ReturnType<Page["locator"]>): Promise<void> {
@@ -194,6 +253,7 @@ for (const c of cases) {
     await expect(page.locator(".issue .bubble").first()).toBeVisible();
     await expect(page.locator(".issue summary", { hasText: "See details" }).first()).toBeVisible();
     await check(page, "rehearse", { name: c.shots ? "rehearse" : undefined });
+    await busyDayAndMoney(page, base, c.shots);
 
     // 6. Storefront is locked in effect until everything is cleared; clear it in place
     await resolveEverything(page, base);
@@ -206,6 +266,7 @@ for (const c of cases) {
     await page.getByRole("button", { name: "Preview your storefront" }).click();
     const shop = page.frameLocator("iframe[title='Preview of your storefront']");
     await expect(shop.locator(".hero__title")).toBeVisible();
+    await expect(shop.getByText(/^Rehearsed · \d+ checks$/)).toBeVisible(); // the gate passed, so the badge shows
     await expect(shop.getByRole("status").filter({ hasText: "Preview: orders are off" })).toBeVisible();
     await page.getByRole("link", { name: "Phone" }).click();
     await expect(page.locator(".device--phone")).toBeVisible();

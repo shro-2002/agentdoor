@@ -15,7 +15,8 @@ function chips(policy: BusinessPolicy): string[] {
   ];
 }
 
-export function hero(policy: BusinessPolicy): SafeHtml {
+/** `badge` is the trust badge, drawn by the caller that knows whether the rules were rehearsed (empty for none). */
+export function hero(policy: BusinessPolicy, badge: SafeHtml = html``): SafeHtml {
   const { business } = policy;
   return html`<section class="hero" aria-labelledby="hero-h">
     <div class="wrap hero__grid">
@@ -28,6 +29,7 @@ export function hero(policy: BusinessPolicy): SafeHtml {
           <a class="btn btn--quiet btn--lg" href="#menu">See what's baking</a>
         </p>
         <ul class="hero__chips" aria-label="Good to know">${chips(policy).map((c) => html`<li>${icon("check")}<span>${c}</span></li>`)}</ul>
+        ${badge}
       </div>
       <figure class="hero__frame">
         <div class="hero__photo">${photoImg(HERO_PHOTO, { hero: true, className: "photo photo--hero" })}</div>

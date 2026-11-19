@@ -10,6 +10,7 @@ import {
   type SignedLaunchRecord,
 } from "@agentdoor/core";
 import { runChecks, type GateCheck } from "../../../launcher/src/flows/gate.js";
+import type { Trust } from "../views/trust.js";
 import type { DraftState } from "./state.js";
 
 export interface Readiness {
@@ -90,4 +91,10 @@ export function buildPackage(state: DraftState, keys: { privateKey: string; publ
   const signed = signLaunchRecord(record, keys.privateKey);
   if (!verifyLaunchRecord(signed, keys.publicKey)) throw new Error("signing key mismatch");
   return { policyJson: `${JSON.stringify(policy, null, 2)}\n`, policyHash: record.policyHash, signed };
+}
+
+/** What a preview may say about the draft: "Rehearsed" only while the same gate that unlocks publishing passes. */
+export function previewTrust(state: DraftState): Trust {
+  const run = state.run;
+  return { kind: "preview", rehearsed: run !== null && readiness(state).canPublish, checks: run ? run.summary.probes + run.summary.scenarios : 0 };
 }

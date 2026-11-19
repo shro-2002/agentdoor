@@ -8,6 +8,8 @@ export interface ShopIdentity {
   city?: string;
   /** Delivery areas by name, for the footer's "where we deliver" line. */
   areas?: string[];
+  /** Where the shop's plain-words rules page lives, for the footer link. */
+  rulesHref?: string;
 }
 
 /** Only a plain mailbox is linked: anything else shows nothing rather than a broken mailto. */

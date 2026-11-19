@@ -48,6 +48,7 @@ export function bakeryFooter(shop: ShopIdentity, email: string, showPersona = tr
         <p><a href="/contact">Contact ${owner}</a></p>
         ${MAILBOX.test(email) ? html`<p>${contactLink(email)}</p>` : ""}
         <p><a href="/order">Place an order</a></p>
+        ${shop.rulesHref ? html`<p><a href="${shop.rulesHref}">How we work</a></p>` : ""}
       </nav>
       <div class="foot__col">
         <p class="foot__head">Where we are</p>

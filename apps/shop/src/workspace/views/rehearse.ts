@@ -2,6 +2,9 @@ import { html, type SafeHtml } from "@agentdoor/ui";
 import type { GapCategory } from "@agentdoor/core";
 import type { IssueCard } from "../cards.js";
 import { labelOfPath, valueOfPath } from "./describe.js";
+import { rupees } from "../money.js";
+import { protectedTotal } from "../stakes.js";
+import { busyDaySection, type BusyDayView } from "./busy-day.js";
 import { frame, type PageHead, type ViewCtx } from "./frame.js";
 import { icon, type IconName } from "./icons.js";
 import { issueCard } from "./issue.js";
@@ -47,6 +50,16 @@ function chips(ctx: ViewCtx): SafeHtml {
   })}</ul>`;
 }
 
+/** The sum of the stakes on issues the owner fixed. Its own figure: it is never mixed into the four counts. */
+function protectedBlock(ctx: ViewCtx): SafeHtml {
+  const saved = ctx.state.protectedStakes ?? [];
+  if (saved.length === 0) return html``;
+  return html`<div class="protected">
+    <p class="protected__total"><strong>Protected so far: ${rupees(protectedTotal(ctx.state))}</strong><span>The money that was at stake on the issues you have fixed. It is not one of the four counts.</span></p>
+    <details class="protected__list"><summary>See what was protected</summary><ul>${saved.map((s) => html`<li><span class="protected__what">${s.title}</span><strong>${rupees(s.paise)}</strong><small>${s.line}</small></li>`)}</ul></details>
+  </div>`;
+}
+
 function summary(ctx: ViewCtx): SafeHtml {
   const { ready, state } = ctx;
   const words = headline(ctx);
@@ -61,6 +74,7 @@ function summary(ctx: ViewCtx): SafeHtml {
     ${readinessRing(settledPercent(state, ready))}
     <div class="hero-card__text"><h2 id="ready-h" class="hero-card__title">${words.title}</h2><p>${words.text}</p>${lock}${go}</div>
     ${chips(ctx)}
+    ${protectedBlock(ctx)}
     ${run ? html`<p class="hero-card__meta">${run.summary.probes} technical checks and ${run.summary.scenarios} customer tests were run.</p>` : ""}
   </section>`;
 }
@@ -105,7 +119,7 @@ function actions(ctx: ViewCtx): SafeHtml {
   return html`${fresh}${again}`;
 }
 
-export function rehearsePage(ctx: ViewCtx, cards: IssueCard[]): string {
+export function rehearsePage(ctx: ViewCtx, cards: IssueCard[], busy: BusyDayView): string {
   const { job, ready } = ctx;
   const head: PageHead = { title: "Rehearse", lede: "Test your rules against realistic customers before anyone orders.", actions: actions(ctx) };
   if (!ready.hasPolicy)
@@ -116,5 +130,6 @@ export function rehearsePage(ctx: ViewCtx, cards: IssueCard[]): string {
   const stated = statedPending(ctx);
   const stale = ready.hasRun && ready.stale ? notice("warn", "Your rules changed since this run. Run the checks again to update the numbers.") : "";
   const sections = ready.hasRun ? html`<div class="cats">${CATEGORIES.map((c) => section(ctx, c, open.filter((x) => x.category === c.key), stated))}</div>` : "";
-  return frame(ctx, "rehearse", head, html`${failed}${stale}${summary(ctx)}${sections}`);
+  const busyDay = ctx.state.policy ? busyDaySection(ctx, ctx.state.policy, busy) : "";
+  return frame(ctx, "rehearse", head, html`${failed}${stale}${summary(ctx)}${busyDay}${sections}`);
 }

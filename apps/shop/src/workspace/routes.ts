@@ -1,11 +1,14 @@
 import { createHash } from "node:crypto";
+import type { BusinessPolicy } from "@agentdoor/core";
 import { Router, type Request, type RequestHandler, type Response } from "express";
 import { formBody } from "../http/body.js";
 import { requireSameOrigin } from "../security/origin.js";
 import type { OwnerAuth } from "../security/owner-auth.js";
 import type { Limiters } from "../security/rate-limits.js";
 import type { ServiceContext } from "../services/context.js";
-import { previewStorefrontPage } from "../views/storefront.js";
+import { previewHowWeWorkPage, previewStorefrontPage } from "../views/storefront.js";
+import type { Trust } from "../views/trust.js";
+import { busyDayFor, registerBusyDay } from "./busy-day-routes.js";
 import { buildCards } from "./cards.js";
 import { LIMITS, type WorkspaceConfig } from "./config.js";
 import { isId, newId, readDraftIds } from "./cookie.js";
@@ -28,7 +31,7 @@ import { recordRun, rehearseNow, scenariosFit } from "./flows.js";
 import { WorkspaceJobs, type StartResult } from "./jobs.js";
 import { applyFix, commitPolicy } from "./ops.js";
 import { nextQuestion, recordAnswer } from "./questions.js";
-import { buildPackage, readiness } from "./readiness.js";
+import { buildPackage, previewTrust, readiness } from "./readiness.js";
 import { HTTP } from "./route-kit.js";
 import { registerStart } from "./start-routes.js";
 import type { DraftRow, DraftState } from "./state.js";
@@ -141,7 +144,7 @@ export function createWorkspace(ctx: ServiceContext, limiters: Limiters, ownerAu
   router.get("/launch/w/:id/rules", page(rulesPage));
   router.get("/launch/w/:id/rehearse", async (req, res) => {
     const c = await viewCtx(req, res);
-    send(res, rehearsePage(c, buildCards(c.state, c.base)));
+    send(res, rehearsePage(c, buildCards(c.state, c.base, { draftId: c.id, nowMs: c.nowMs }), busyDayFor(req.query.simulate, c)));
   });
   router.get("/launch/w/:id/storefront", page(storefrontTabPage));
 
@@ -211,7 +214,7 @@ export function createWorkspace(ctx: ServiceContext, limiters: Limiters, ownerAu
     try {
       await updateState(pool, row.id, (s) => {
         if (!s.policy) throw new EditError("Set up your business first.");
-        commitPolicy(s, change(s.policy, req, new Date(now()).toISOString()), now());
+        commitPolicy(s, change(s.policy, req, new Date(now()).toISOString()), now(), row.id);
       });
       back(res, row, tab, "ok", done);
     } catch (e) {
@@ -245,7 +248,7 @@ export function createWorkspace(ctx: ServiceContext, limiters: Limiters, ownerAu
       if (!s.policy) return;
       const out = approveStated(s.policy, new Date(now()).toISOString());
       count = out.count;
-      commitPolicy(s, out.policy, now());
+      commitPolicy(s, out.policy, now(), row.id);
     });
     back(res, row, nextTab(req, "rules"), count > 0 ? "ok" : "info", count > 0 ? `Approved ${count} ${count === 1 ? "rule" : "rules"} you stated.` : "Nothing left that you stated.");
   });
@@ -269,13 +272,15 @@ export function createWorkspace(ctx: ServiceContext, limiters: Limiters, ownerAu
     const row = rowOf(res);
     const raw = str(req.body?.value, 8);
     try {
-      await updateState(pool, row.id, (s) => applyFix(s, str(req.body?.gapId, 200), str(req.body?.choice, 60), raw === "" ? undefined : Number(raw), now()));
+      await updateState(pool, row.id, (s) => applyFix(s, str(req.body?.gapId, 200), str(req.body?.choice, 60), raw === "" ? undefined : Number(raw), now(), row.id));
       back(res, row, "rehearse", "ok", "Done. The checks have been re-run.");
     } catch (e) {
       if (!(e instanceof EditError)) throw e;
       back(res, row, "rehearse", "bad", e.message);
     }
   });
+
+  registerBusyDay({ router, pool, now, sameOrigin });
 
   // ---- preview and publishing ------------------------------------------------------------------------
 
@@ -306,14 +311,16 @@ export function createWorkspace(ctx: ServiceContext, limiters: Limiters, ownerAu
   });
 
   // A preview is read-only, shareable and has its own random id; it carries no way to edit or order.
-  router.get("/launch/p/:previewId", async (req, res) => {
+  const preview = (render: (policy: BusinessPolicy, previewPath: string, trust: Trust) => string): RequestHandler => async (req, res) => {
     const previewId = String(req.params.previewId);
     const row = isId(previewId) ? await getDraftByPreview(pool, previewId) : null;
     if (!row?.state.policy) return send(res, messagePage("Not found", "This preview does not exist."), HTTP.notFound);
     if (!(await hit(pool, "prev_req", previewId, MINUTE_MS, LIMITS.previewRequestsPerMinute, now()))) return send(res, messagePage("Slow down", "Too many requests. Try again in a minute."), HTTP.tooMany);
     res.set("X-Robots-Tag", "noindex");
-    send(res, previewStorefrontPage(row.state.policy, `/launch/p/${previewId}`));
-  });
+    send(res, render(row.state.policy, `/launch/p/${previewId}`, previewTrust(row.state)));
+  };
+  router.get("/launch/p/:previewId", preview(previewStorefrontPage));
+  router.get("/launch/p/:previewId/how-we-work", preview(previewHowWeWorkPage));
 
   return { router, jobs };
 }

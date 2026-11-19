@@ -116,17 +116,20 @@
   });
 
   // ---- fixes and approvals: resolve in place, then show the fresh page ----
-  const settle = (form) => {
+  const settle = (form, body) => {
     const card = form.closest(".issue, .rule");
     const targets = card ? [card] : $$(".rules--flat .rule");
     targets.forEach((el) => el.classList.add("is-resolved"));
+    // "Accept" settles the card but protects nothing, so the card must not claim it did.
+    const panel = card && $(".issue__resolved", card);
+    if (panel && body.get("choice") === panel.dataset.accept) card.classList.add("is-accepted");
   };
 
   async function resolve(form, body) {
     const res = await fetch(form.action, { method: "POST", body, credentials: "same-origin", headers: { Accept: "text/html" } });
     if (!res.ok) throw new Error("status");
     const fresh = new DOMParser().parseFromString(await res.text(), "text/html");
-    settle(form);
+    settle(form, body);
     window.setTimeout(() => {
       const main = $("#main");
       const next = $("#main", fresh);

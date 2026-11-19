@@ -19,7 +19,7 @@ Judges: start at https://agentdoor.shop/try (replay of the real launcher session
 
 **Measured results** (19 Nov 2026, our own measurements).
 - 3 live Claude calls (claude-sonnet-5-5), $0.1467 for the whole launch.
-- Rehearsal: 10 critical gaps on the first run, 3 scenario gaps accepted as the owner's intent, final 0.
+- Rehearsal: the rules exactly as first written show 31 open gaps (28 are rules still waiting for the owner's approval), as recomputed on /launch and /launch-report; the launcher's first rehearsal in the session found 10 critical gaps; 3 scenario gaps were accepted as the owner's intent; final 0.
 - Deploy: 10 steps, 30.3 s.
 - Live MCP quote, order, restart and redeploy persistence, and stale-quote refusal.
 - 464 unit and integration and 54 end-to-end tests, zero serious or critical accessibility violations, 20 concurrent orders oversold zero, 18 of 19 security checklist items with evidence.

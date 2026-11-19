@@ -44,7 +44,7 @@ function hero(s: LaunchStory | null, repoUrl: string): SafeHtml {
       ${s
         ? html`<aside class="ad-hero__card" aria-label="Before and after the rehearsal">
             <p class="ad-hero__card-t">One real launch, before and after</p>
-            <p class="ad-hero__pair"><span><strong>${s.first.gaps.critical}</strong> critical gaps<br>first rehearsal</span><span class="ad-hero__arrow" aria-hidden="true">→</span><span><strong>${s.final.gaps.open}</strong> open<br>at launch</span></p>
+            <p class="ad-hero__pair"><span><strong>${s.first.gaps.open}</strong> gaps open<br>first rehearsal</span><span class="ad-hero__arrow" aria-hidden="true">→</span><span><strong>${s.final.gaps.open}</strong> open<br>at launch</span></p>
           </aside>`
         : ""}
     </div>

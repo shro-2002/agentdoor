@@ -14,7 +14,7 @@ function firstRun(s: LaunchStory): SafeHtml {
   return html`<article class="stage stage--first" aria-labelledby="stage-first-h">
     <p class="stage__tag">First rehearsal</p>
     <h3 id="stage-first-h" class="visually-hidden">The first rehearsal run</h3>
-    ${figure(s.first.gaps.critical, "critical gaps on the first rehearsal run, before anything was fixed", "bad")}
+    ${figure(s.first.gaps.open, "gaps open on the first rehearsal run, before anything was fixed", "bad")}
     <p class="stage__facts">${s.first.checks} checks run, ${s.first.passed} passed. The rules were exactly as first written down.</p>
     ${provenanceBadge({ kind: "live", note: `Recomputed when you loaded this page, on ${s.first.basis.split(",")[0]}.` })}
   </article>`;
@@ -29,7 +29,7 @@ function gapCards(s: LaunchStory): SafeHtml {
       <p class="gapitem__title">${icon("alert")}<span>${g.title}${g.count > 1 ? html` <span class="gapitem__count">×${g.count}</span>` : ""}</span></p>
       <p>${g.consequence}</p>
     </li>`)}</ul>
-    ${s.waitingForOwner > 0 ? html`<p class="stage__facts">Plus ${s.waitingForOwner} more critical gaps that only meant a rule was still waiting for the owner's OK.</p>` : ""}
+    ${s.waitingForOwner > 0 ? html`<p class="stage__facts">Plus ${s.waitingForOwner} more gaps that only meant a rule was still waiting for the owner's OK.</p>` : ""}
   </article>`;
 }
 

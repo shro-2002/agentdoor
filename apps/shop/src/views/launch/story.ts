@@ -68,7 +68,7 @@ function gapCards(session: TrySession, nowMs: number): { gaps: GapStory[]; waiti
   const policy = session.policyVersions[0]!;
   const groups = new Map<string, GapStory>();
   let waiting = 0;
-  for (const g of runLive(session, 1, nowMs).gaps.filter((x) => x.severity === "critical")) {
+  for (const g of runLive(session, 1, nowMs).gaps.filter((x) => x.severity === "critical" && !x.dismissed)) {
     if (WAITING_CODES.has(g.code)) {
       waiting += 1;
       continue;

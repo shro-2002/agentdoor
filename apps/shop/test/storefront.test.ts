@@ -181,8 +181,8 @@ describe("order page (/order)", () => {
 describe("AgentDoor landing (/launch)", () => {
   it("leads with the exact headline and the first-run critical-gap number taken from the recorded session", () => {
     const story = buildLaunchStory(session, launch.record, NOW);
-    const expected = liveRunFigures("First rehearsal run", runLive(session, 1, NOW)).gaps.critical;
-    expect(story.first.gaps.critical).toBe(expected);
+    const expected = liveRunFigures("First rehearsal run", runLive(session, 1, NOW)).gaps.open;
+    expect(story.first.gaps.open).toBe(expected);
     const page = launchPage(story);
     expect(page).toContain(`<h1 id="launch-h" class="ad-hero__title">${esc(LAUNCH_HEADLINE)}</h1>`);
     expect(LAUNCH_HEADLINE).toBe("Don't just launch your business. Rehearse it before your first customer arrives.");

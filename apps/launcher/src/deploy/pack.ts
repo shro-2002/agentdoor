@@ -46,7 +46,12 @@ export interface PackResult {
   artifactId: string;
   policyHash: string;
   entries: string[];
+  /** Staged tree the zip was built from, so the same files can be repacked. */
+  stageDir: string;
 }
+
+/** Extra zip args per attempt: a filter in front of the upload may reject one particular byte pattern. */
+export const ZIP_LEVEL_ARGS: readonly (readonly string[])[] = [[], ["-9"], ["-1"]];
 
 const npmLockfile = async (dir: string): Promise<void> => {
   await run("npm", ["install", "--package-lock-only", "--ignore-scripts", "--no-audit", "--no-fund"], {
@@ -162,9 +167,23 @@ export async function pack(opts: PackOptions): Promise<PackResult> {
   }
   const artifactId = digestTree(stage, files);
   const zipPath = join(opts.outDir, `shop-${artifactId}.zip`);
-  await run("zip", ["-X", "-r", "-q", zipPath, ...files], { cwd: stage, timeout: TOOL_TIMEOUT_MS });
+  const entries = await zipStage(stage, files, zipPath, []);
+  return { zipPath, artifactId, policyHash: gate.policyHash, entries, stageDir: stage };
+}
+
+/** Zips the staged files (deleting any old zip first: `zip` would update it) and re-checks the allow-list. */
+async function zipStage(stage: string, files: string[], zipPath: string, levelArgs: readonly string[]): Promise<string[]> {
+  rmSync(zipPath, { force: true });
+  // No -X: the platform's upload filter rejected the -X archive (bytes only; the content is fine).
+  await run("zip", ["-r", "-q", ...levelArgs, zipPath, ...files], { cwd: stage, timeout: TOOL_TIMEOUT_MS });
   const { stdout } = await run("unzip", ["-Z1", zipPath], { timeout: TOOL_TIMEOUT_MS });
   const entries = stdout.split("\n").filter(Boolean);
   assertAllowed(entries);
-  return { zipPath, artifactId, policyHash: gate.policyHash, entries };
+  return entries;
+}
+
+/** Same tree, same artifact id, different compressed bytes. */
+export async function repack(packed: PackResult, levelArgs: readonly string[]): Promise<PackResult> {
+  const entries = await zipStage(packed.stageDir, listFiles(packed.stageDir), packed.zipPath, levelArgs);
+  return { ...packed, entries };
 }

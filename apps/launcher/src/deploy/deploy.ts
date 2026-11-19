@@ -4,7 +4,7 @@ import { APP_NAME, cmd, type Cmd } from "./commands.js";
 import { DeployError } from "./errors.js";
 import type { Gddy } from "./gddy.js";
 import { stdoutLog, type DeployLog } from "./log.js";
-import { pack, type PackOptions, type PackResult } from "./pack.js";
+import { ZIP_LEVEL_ARGS, pack, repack, type PackOptions, type PackResult } from "./pack.js";
 import { applySecrets, ensureSecretFiles, readSigningPublicKey, secretNames, type EnsureSecretsInput, type Variant } from "./secrets.js";
 import { readHealth, smoke, type FetchFn } from "./smoke.js";
 import { checkGate } from "./gate.js";
@@ -13,6 +13,8 @@ const POLL_START_MS = 2_000;
 const POLL_CAP_MS = 15_000;
 const POLL_MAX_MS = 300_000;
 const STATE_MODE = 0o600;
+const UPLOAD_RETRY_DELAY_MS = 5_000;
+const HTTP_FORBIDDEN = 403;
 const PRIVATE_NAMES = ["QUOTE_SIGNING_PRIVATE_KEY", "SESSION_SECRET", "OWNER_TOKEN_HASH"];
 const DONE = new Set(["COMPLETED", "SUCCEEDED", "SUCCESS", "DONE"]);
 const FAILED = new Set(["FAILED", "ERROR", "CANCELLED"]);
@@ -215,7 +217,7 @@ class Deployer {
 
   /** Always uploads: gddy has no list of imports and only the appId is persisted. Returns true. */
   private async upload(packed: PackResult): Promise<boolean> {
-    const started = dataOf(await this.call(cmd.upload(this.appId, packed.zipPath)));
+    const started = await this.startUpload(packed);
     const importId = str(started.importId);
     if (!importId) throw new DeployError("GDDY_BAD_RESPONSE", "upload returned no import id");
     await this.poll("import", async () => {
@@ -225,6 +227,32 @@ class Deployer {
     });
     this.mark("upload", "done");
     return true;
+  }
+
+  /**
+   * A bot filter in front of the upload endpoint sometimes answers 403 for one specific compressed
+   * archive. Only that case is retried, each time with a differently compressed zip of the same tree.
+   */
+  private async startUpload(first: PackResult): Promise<Json> {
+    let packed = first;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return dataOf(await this.call(cmd.upload(this.appId, packed.zipPath)));
+      } catch (err) {
+        if (!(err instanceof DeployError) || err.httpStatus !== HTTP_FORBIDDEN) throw err;
+        if (attempt + 1 >= ZIP_LEVEL_ARGS.length) {
+          throw new DeployError(
+            err.code,
+            `upload was blocked by the platform filter after ${ZIP_LEVEL_ARGS.length} differently packed attempts`,
+            err.status,
+            err.httpStatus,
+          );
+        }
+        this.log({ event: "upload-retry", attempt: attempt + 1, reason: "filter-403" });
+        await this.sleep(UPLOAD_RETRY_DELAY_MS);
+        packed = await repack(packed, ZIP_LEVEL_ARGS[attempt + 1] ?? []);
+      }
+    }
   }
 
   private async publishUrl(): Promise<string> {

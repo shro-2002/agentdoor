@@ -4,6 +4,8 @@ export class DeployError extends Error {
     readonly code: string,
     message: string,
     readonly status = 500,
+    /** Status of the upstream HTTP response when gddy reported one (e.g. 403 from a filter). */
+    readonly httpStatus?: number,
   ) {
     super(message);
     this.name = "DeployError";

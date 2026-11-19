@@ -9,6 +9,8 @@ const JSON_START = /^\s*[{[]/;
 
 export interface ExecResult {
   stdout: string;
+  /** Only ever parsed for the HTTP status of an error document; never logged. */
+  stderr?: string;
   failed: boolean;
   killed: boolean;
 }
@@ -18,11 +20,11 @@ export type ExecFn = (
   opts: { timeout: number; maxBuffer: number; env: NodeJS.ProcessEnv },
 ) => Promise<ExecResult>;
 
-// stderr is deliberately dropped: it can echo argv and is never parsed or shown.
+// stderr can echo argv: it is returned only so the HTTP status can be read from it, never shown.
 const defaultExec: ExecFn = (file, args, opts) =>
   new Promise((resolve) => {
-    execFile(file, args, opts, (err, stdout) => {
-      resolve({ stdout, failed: err !== null, killed: Boolean(err?.killed) });
+    execFile(file, args, opts, (err, stdout, stderr) => {
+      resolve({ stdout, stderr, failed: err !== null, killed: Boolean(err?.killed) });
     });
   });
 
@@ -54,6 +56,23 @@ function errorCodeOf(parsed: unknown): string | null {
   if (err === undefined || err === null || err === false) return null;
   const code = typeof err === "object" ? (err as { code?: unknown }).code : err;
   return typeof code === "string" ? code : "GDDY_ERROR";
+}
+
+const HTTP_ERROR = /^HTTP error (\d{3})\b/;
+
+/** Reads the status from gddy's stderr error document (`error.message` starting "HTTP error 403"). */
+export function httpStatusFromStderr(stderr: string | undefined): number | undefined {
+  if (!stderr) return undefined;
+  let parsed: unknown;
+  try {
+    parsed = parseStdoutJson(stderr);
+  } catch {
+    return undefined;
+  }
+  const err = typeof parsed === "object" && parsed !== null ? (parsed as { error?: unknown }).error : undefined;
+  const message = typeof err === "object" && err !== null ? (err as { message?: unknown }).message : undefined;
+  const match = typeof message === "string" ? HTTP_ERROR.exec(message) : null;
+  return match ? Number(match[1]) : undefined;
 }
 
 export interface GddyOptions {
@@ -93,7 +112,8 @@ export class Gddy {
     try {
       parsed = parseStdoutJson(res.stdout);
     } catch {
-      return this.fail(label, res.failed ? "GDDY_FAILED" : "GDDY_NO_JSON", `gddy ${label} gave no usable JSON`);
+      const httpStatus = res.failed ? httpStatusFromStderr(res.stderr) : undefined;
+      return this.fail(label, res.failed ? "GDDY_FAILED" : "GDDY_NO_JSON", `gddy ${label} gave no usable JSON`, httpStatus);
     }
     const code = errorCodeOf(parsed) ?? (res.failed ? "GDDY_FAILED" : null);
     if (code !== null) return this.fail(label, code, `gddy ${label} failed: ${code}`);
@@ -101,8 +121,8 @@ export class Gddy {
     return parsed;
   }
 
-  private fail(label: string, code: string, message: string): never {
-    this.log({ event: "gddy", label, ok: false, code });
-    throw new DeployError(code, message);
+  private fail(label: string, code: string, message: string, httpStatus?: number): never {
+    this.log(httpStatus === undefined ? { event: "gddy", label, ok: false, code } : { event: "gddy", label, ok: false, code, httpStatus });
+    throw new DeployError(code, message, 500, httpStatus);
   }
 }

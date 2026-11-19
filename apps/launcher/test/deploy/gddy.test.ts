@@ -72,6 +72,21 @@ describe("scripts/deploy.ts live guard", () => {
   });
 });
 
+describe("HTTP status from the stderr error document", () => {
+  const stderr = JSON.stringify({ error: { code: "NETWORK_ERROR", message: "HTTP error 403: <html><script>x</script></html>" } });
+  it("is surfaced as a typed field without leaking argv or the body", async () => {
+    const logs: unknown[] = [];
+    const g = new Gddy({ bin: "/fake/gddy", exec: scripted({ stdout: "", stderr, failed: true }), log: (e) => logs.push(e) });
+    const err = await g.call("hosting source upload", ["--file", "/secret/p.zip"]).catch((e: unknown) => e);
+    expect(err).toMatchObject({ code: "GDDY_FAILED", httpStatus: 403 });
+    expect(JSON.stringify([logs, (err as Error).message])).not.toMatch(/secret|script|html/);
+  });
+  it("is absent when stderr has no HTTP error", async () => {
+    const g = new Gddy({ bin: "/fake/gddy", exec: scripted({ stderr: "boom", failed: true }), log: () => undefined });
+    await expect(g.call("x", [])).rejects.toMatchObject({ code: "GDDY_FAILED", httpStatus: undefined });
+  });
+});
+
 describe("command table uses only verified real gddy shapes", () => {
   // First three words plus the flag names, in order. Anything else is not a verified real gddy command.
   const ALLOWED = new Set([

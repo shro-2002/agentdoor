@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import { assertAllowed, pack, type PackOptions } from "../../src/deploy/pack.js";
+import { ZIP_LEVEL_ARGS, assertAllowed, pack, repack, type PackOptions } from "../../src/deploy/pack.js";
 import { makeBundle, makeEnv, type Env } from "./helpers.js";
 
 let env: Env;
@@ -76,6 +76,18 @@ describe("pack", () => {
 
   it("refuses to pack a secret value found in a packed file", async () => {
     await expect(pack(options({ forbiddenValues: ["Meera's Kitchen"] }))).rejects.toMatchObject({ code: "ZIP_NOT_ALLOWED" });
+  });
+
+  it("repacks the same tree at each level (default, -9, -1) with the allow-list re-checked", async () => {
+    expect(ZIP_LEVEL_ARGS).toEqual([[], ["-9"], ["-1"]]);
+    const first = await pack(options());
+    for (const level of ZIP_LEVEL_ARGS) {
+      const again = await repack(first, level);
+      expect(again.artifactId).toBe(first.artifactId);
+      expect([...again.entries].sort()).toEqual([...first.entries].sort());
+      const listed = execFileSync("unzip", ["-Z1", again.zipPath]).toString().split("\n").filter(Boolean);
+      expect(() => assertAllowed(listed)).not.toThrow();
+    }
   });
 
   it("runs the GoDaddy validator when it exists and fails if it fails", async () => {

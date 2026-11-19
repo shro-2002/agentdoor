@@ -58,6 +58,15 @@ const handlers = {
   },
   "hosting subscription get": () => (state.subscription ? out({ attached: true }) : fail("SUBSCRIPTION_NOT_ATTACHED")),
   "hosting source upload": () => {
+    const injected = (state.uploadFailures ?? []).shift();
+    if (injected) {
+      save();
+      // Real shape: exit 5, nothing on stdout, a JSON error document on stderr (HTML body inside for 403).
+      const html = "<html><head><title>403 Forbidden</title><script>var x=1</script></head></html>";
+      const message = injected === 403 ? `HTTP error 403: ${html}` : `HTTP error ${injected}: server said no`;
+      console.error(JSON.stringify({ error: { code: "NETWORK_ERROR", message } }));
+      process.exit(5);
+    }
     const importId = `imp-${state.imports.length + 1}`;
     state.imports.push({ importId, fileName: basename(flag("--file")), status: "COMPLETED" });
     save();

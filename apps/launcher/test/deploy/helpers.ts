@@ -34,6 +34,8 @@ export interface FakeState {
   apps: { id: string; name: string }[];
   calls: string[][];
   failOnce: string[];
+  /** HTTP statuses the next uploads fail with, consumed in order. */
+  uploadFailures?: number[];
   created: number;
   subscription: boolean;
   imports: { importId: string; fileName: string; status: string }[];

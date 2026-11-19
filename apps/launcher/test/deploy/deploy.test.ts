@@ -231,3 +231,47 @@ describe("smoke and polling", () => {
     expect(sleeps.reduce((a, b) => a + b, 0)).toBeGreaterThanOrEqual(300_000);
   });
 });
+
+describe("upload blocked by the platform filter (403)", () => {
+  const uploads = (): number => calls(env).filter((c) => c === "hosting source upload").length;
+
+  it("repacks and retries once, then continues; the third level is unused", async () => {
+    env.writeState({ uploadFailures: [403] });
+    const sleeps: number[] = [];
+    const res = await deploy(opts({ sleep: async (ms) => void sleeps.push(ms) }));
+    expect(uploads()).toBe(2);
+    expect(res.steps.upload).toBe("done");
+    expect(res.steps.publish).toBe("done");
+    expect(sleeps[0]).toBeGreaterThanOrEqual(1000);
+    expect(logs.filter((l) => l.event === "upload-retry")).toHaveLength(1);
+    expect(env.readState().imports).toHaveLength(1);
+  });
+
+  it("three 403s: blocked error, 3 uploads, no publish", async () => {
+    env.writeState({ uploadFailures: [403, 403, 403] });
+    const err = await deploy(opts()).catch((e: unknown) => e);
+    expect(err).toMatchObject({ code: "GDDY_FAILED", httpStatus: 403 });
+    expect((err as Error).message).toMatch(/blocked by the platform filter after 3 differently packed attempts/);
+    expect(uploads()).toBe(3);
+    expect(calls(env)).not.toContain("hosting deployment publish");
+    expect(calls(env)).not.toContain("api call -X");
+  });
+
+  it("a 500 is not retried by repacking", async () => {
+    env.writeState({ uploadFailures: [500] });
+    const err = await deploy(opts()).catch((e: unknown) => e);
+    expect(err).toMatchObject({ code: "GDDY_FAILED", httpStatus: 500 });
+    expect(uploads()).toBe(1);
+    expect(logs.some((l) => l.event === "upload-retry")).toBe(false);
+  });
+
+  it("logs never carry argv, secrets, the HTML body or zip contents", async () => {
+    env.writeState({ uploadFailures: [403, 403, 403] });
+    await deploy(opts()).catch(() => undefined);
+    const text = JSON.stringify(logs);
+    const zip = readdirSync(join(env.root, "out")).find((f) => f.endsWith(".zip")) as string;
+    for (const leak of ["APP-NEW", env.root, ".zip", zip, "--app-id", "--file", "<html", "<script", "var x=1","Forbidden", SECRET_RECIPIENT, "dist/index.js", "package.json"]) {
+      expect(text, leak).not.toContain(leak);
+    }
+  });
+});

@@ -74,6 +74,13 @@ describe("owner auth and dashboard (SEC-3, SEC-4, SEC-5)", () => {
     expect(platform.status).toBe(303);
   });
 
+  it("R2 #4: the www counterpart of the public host is allowed; a sibling subdomain is not", async () => {
+    const www = await formPost(shop, "/owner/login", { token: OWNER_TOKEN }, { origin: "https://www.shop.example.test" });
+    expect(www.status).toBe(303);
+    const evil = await formPost(shop, "/owner/login", { token: OWNER_TOKEN }, { origin: "https://evil.shop.example.test" });
+    expect(evil.status).toBe(403);
+  });
+
   it("tampered or expired cookies do not authenticate", async () => {
     const cookie = await login(shop);
     const [name, value] = cookie.split("=") as [string, string];
@@ -200,6 +207,15 @@ describe("contact form (I-MAIL-1, SEC-13)", () => {
       message: string;
       email_status: string;
     }[];
+
+  it("R2 #4: the contact form works from the www origin", async () => {
+    const r = await post(
+      { name: "Priya", email: "priya@example.test", message: "From www" },
+      { origin: "https://www.shop.example.test" },
+    );
+    expect(r.status).toBe(303);
+    expect(r.headers.get("location")).toBe("/contact?sent=1");
+  });
 
   it("GET /contact renders the form with a hidden honeypot field", async () => {
     const r = await fetch(shop.base + "/contact");

@@ -2,6 +2,7 @@ import {
   QuoteRequestSchema,
   capacityOn,
   evaluate,
+  fulfilmentInstantMs,
   decodeQuoteToken,
   type BusinessPolicy,
   type OrderStatus,
@@ -66,6 +67,10 @@ export const statusUrlFor = (publicBaseUrl: string, orderId: string, token: stri
 function freshnessError(ctx: ServiceContext, quote: QuoteTokenPayload, nowMs: number): OrderErrorCode | null {
   if (!ctx.launch.launched) return "SHOP_NOT_LAUNCHED";
   if (Math.floor(nowMs / MS_PER_SECOND) >= quote.exp) return "QUOTE_EXPIRED";
+  // Lead time was checked at `iat` only; a quote must not buy a slot whose pickup already passed.
+  // (Re-running the engine at now is not done: lead time may lapse minutes after a fair quote.)
+  const date = (quote.request as { date: string }).date;
+  if (fulfilmentInstantMs(date) <= nowMs) return "QUOTE_EXPIRED";
   if (quote.policyHash !== ctx.launch.policyHash) return "QUOTE_STALE_POLICY";
   if (!engineAgrees(ctx.launch.policy, quote)) return "QUOTE_INVALID";
   return null;

@@ -8,6 +8,9 @@ const TRANSIENT_CODES = new Set([
   "PROTOCOL_CONNECTION_LOST",
   "ER_CON_COUNT_ERROR",
   "ER_SERVER_SHUTDOWN",
+  // Managed MySQL caps connections per user: a busy moment, not a bug.
+  "ER_TOO_MANY_USER_CONNECTIONS",
+  "ER_USER_LIMIT_REACHED",
   "POOL_CLOSED",
 ]);
 /** mysql2 raises a plain Error (no code) when the pool's wait queue is full. */

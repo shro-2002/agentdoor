@@ -2,10 +2,21 @@ import type { RequestHandler } from "express";
 import type { ShopConfig } from "../config.js";
 import { sendError } from "../http/envelope.js";
 
-/** The custom domain and the platform PREFIX URL both reach this app (T01). */
+const WWW = "www.";
+
+/** apex <-> www: both names serve the app directly (no redirect), so a form can be posted from either. */
+function wwwCounterpart(url: URL): string {
+  const twin = new URL(url.origin);
+  twin.hostname = url.hostname.startsWith(WWW) ? url.hostname.slice(WWW.length) : WWW + url.hostname;
+  return twin.origin;
+}
+
+/** The custom domain (apex and www) and the platform PREFIX URL all reach this app (T01). */
 export function allowedOrigins(config: Pick<ShopConfig, "publicBaseUrl" | "platformBaseUrl">): Set<string> {
-  const urls = [config.publicBaseUrl, config.platformBaseUrl].filter((u): u is string => !!u);
-  return new Set(urls.map((u) => new URL(u).origin));
+  const publicUrl = new URL(config.publicBaseUrl);
+  const origins = new Set([publicUrl.origin, wwwCounterpart(publicUrl)]);
+  if (config.platformBaseUrl) origins.add(new URL(config.platformBaseUrl).origin);
+  return origins;
 }
 
 /**

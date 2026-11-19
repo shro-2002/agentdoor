@@ -22,6 +22,8 @@ const EnvSchema = z.object({
   OWNER_TOKEN_HASH: z.string().regex(SHA256_HEX),
   CONTACT_FORM_RECIPIENT_EMAIL: z.email(),
   PUBLIC_BASE_URL: z.url(),
+  /** The platform's PREFIX URL (`*.airoapp.ai`): a second origin the owner can reach the shop from. */
+  PLATFORM_BASE_URL: z.url().optional(),
   NODE_ENV: z.enum(["production", "development", "test"]).default("production"),
 });
 
@@ -35,6 +37,7 @@ export interface ShopConfig {
   ownerTokenHash: string;
   contactRecipient: string;
   publicBaseUrl: string;
+  platformBaseUrl: string | null;
 }
 
 /** Only variable names are reported, never values: the result may be logged. */
@@ -83,6 +86,7 @@ export function parseConfig(env: Record<string, string | undefined>): ConfigResu
       ownerTokenHash: e.OWNER_TOKEN_HASH,
       contactRecipient: e.CONTACT_FORM_RECIPIENT_EMAIL,
       publicBaseUrl: e.PUBLIC_BASE_URL,
+      platformBaseUrl: e.PLATFORM_BASE_URL ?? null,
     },
   };
 }

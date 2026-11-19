@@ -16,7 +16,7 @@ export type NotLaunchedReason =
   | "POLICY_HASH_MISMATCH";
 
 export type LaunchState =
-  | { launched: true; policy: BusinessPolicy; policyHash: string; record: LaunchRecord }
+  | { launched: true; policy: BusinessPolicy; policyHash: string; record: LaunchRecord; signed: SignedLaunchRecord }
   | { launched: false; reason: NotLaunchedReason };
 
 const no = (reason: NotLaunchedReason): LaunchState => ({ launched: false, reason });
@@ -40,5 +40,5 @@ export function loadLaunchState(bundleDir: string, trustedPublicKey: string): La
   if (file.record.rehearsal.criticalOpen !== 0) return no("CRITICAL_GAPS_OPEN");
   const hash = policyHash(policy);
   if (file.record.policyHash !== hash) return no("POLICY_HASH_MISMATCH");
-  return { launched: true, policy, policyHash: hash, record: file.record };
+  return { launched: true, policy, policyHash: hash, record: file.record, signed: file };
 }

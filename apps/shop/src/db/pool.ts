@@ -12,10 +12,19 @@ export interface DbConfig {
   password: string;
 }
 
-export function createPool(db: DbConfig): Pool {
+/** Waiters beyond this are rejected at once (mapped to RETRY_LATER) instead of queueing forever. */
+export const POOL_QUEUE_LIMIT = 50;
+
+export interface PoolLimits {
+  connectionLimit?: number;
+  queueLimit?: number;
+}
+
+export function createPool(db: DbConfig, limits: PoolLimits = {}): Pool {
   return createMysqlPool({
     ...db,
-    connectionLimit: POOL_CONNECTION_LIMIT,
+    connectionLimit: limits.connectionLimit ?? POOL_CONNECTION_LIMIT,
+    queueLimit: limits.queueLimit ?? POOL_QUEUE_LIMIT,
     waitForConnections: true,
     connectTimeout: CONNECT_TIMEOUT_MS,
     charset: "utf8mb4",

@@ -31,14 +31,20 @@ export interface AppDeps {
   trustProxyHops?: number;
 }
 
-const BODY_PARSER_STATUS: Record<string, number> = { "entity.too.large": 413 };
+const MIN_CLIENT_ERROR = 400;
+const MAX_CLIENT_ERROR = 499;
+
+/** body-parser (size, charset, encoding, bad JSON) and Express (bad %-escape) tag client faults with `status`. */
+function clientErrorStatus(err: unknown): number | null {
+  const status = (err as { status?: unknown } | null)?.status;
+  return typeof status === "number" && status >= MIN_CLIENT_ERROR && status <= MAX_CLIENT_ERROR ? status : null;
+}
 
 const errorHandler = (log: Logger): ErrorRequestHandler => (err, req, res, _next) => {
   if (res.headersSent) return;
-  const type = (err as { type?: string }).type;
-  if (typeof type === "string" && type.startsWith("entity.")) {
-    return sendError(req, res, "VALIDATION_FAILED", { status: BODY_PARSER_STATUS[type] ?? 400 });
-  }
+  const clientStatus = clientErrorStatus(err);
+  // The caller's fault, not ours: no error-level log, no detail in the response.
+  if (clientStatus) return sendError(req, res, "VALIDATION_FAILED", { status: clientStatus });
   const message = err instanceof Error ? err.message : String(err);
   if (isTransientDbError(err)) {
     log({ level: "error", event: "db_unavailable", requestId: res.locals.requestId, message });

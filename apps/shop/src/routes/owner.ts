@@ -1,4 +1,4 @@
-import { Router, type RequestHandler } from "express";
+import { Router, type Request, type RequestHandler } from "express";
 import type { OrderEvent } from "@agentdoor/core";
 import { transitionOrder } from "../db/orders.js";
 import { isOrderId, listContacts, listOrders } from "../db/queries.js";
@@ -10,6 +10,7 @@ import {
   OWNER_COOKIE,
   SESSION_TTL_MS,
   createSessionCookie,
+  deriveSessionKey,
   hasValidSession,
   ownerTokenMatches,
 } from "../security/session.js";
@@ -32,31 +33,50 @@ export function ownerRouter(ctx: ServiceContext, limiters: Limiters): Router {
   const secure = config.publicBaseUrl.startsWith("https://");
   const cookieOptions = { httpOnly: true, sameSite: "strict", secure, path: "/" } as const;
 
+  // Cookies are keyed by SESSION_SECRET + the owner token hash, so rotating the token ends them all.
+  const sessionKey = deriveSessionKey(config.sessionSecret, config.ownerTokenHash);
+  // In memory by design: a restart forgets it, but cookies still expire after SESSION_TTL_MS.
+  let notBeforeMs = 0;
+  const signedIn = (req: Request): boolean =>
+    hasValidSession(req.headers.cookie, sessionKey, ctx.now(), notBeforeMs);
+  const presentedToken = (req: Request): string =>
+    typeof req.body?.token === "string" ? req.body.token.slice(0, MAX_TOKEN_LENGTH) : "";
+
   const requireSession: RequestHandler = (req, res, next) => {
-    if (hasValidSession(req.headers.cookie, config.sessionSecret, ctx.now())) return next();
+    if (signedIn(req)) return next();
     res.redirect(303, LOGIN_PATH);
   };
 
+  /**
+   * The global bucket exists so a distributed guesser cannot brute-force the token; it must not let
+   * the same guesser lock the real owner out, so a request holding the correct token skips it.
+   */
+  const globalUnlessCorrect: RequestHandler = (req, res, next) => {
+    if (ownerTokenMatches(presentedToken(req), config.ownerTokenHash)) return next();
+    limiters.ownerAuthGlobal(req, res, next);
+  };
+
   router.get(LOGIN_PATH, (req, res) => {
-    if (hasValidSession(req.headers.cookie, config.sessionSecret, ctx.now())) return res.redirect(303, "/owner");
+    if (signedIn(req)) return res.redirect(303, "/owner");
     res.set("Cache-Control", "no-store").type("html").send(loginPage());
   });
 
-  // Limiters run first so a flood of bad guesses is cut off before any work is done.
-  router.post(LOGIN_PATH, limiters.ownerAuthIp, limiters.ownerAuthGlobal, formBody, sameOrigin, (req, res) => {
-    const token = typeof req.body?.token === "string" ? req.body.token.slice(0, MAX_TOKEN_LENGTH) : "";
-    if (!ownerTokenMatches(token, config.ownerTokenHash)) {
+  // Body parsing and the Origin check come first: cross-site posts are refused without being
+  // counted, so an outsider cannot burn the owner's login attempts.
+  router.post(LOGIN_PATH, formBody, sameOrigin, limiters.ownerAuthIp, globalUnlessCorrect, (req, res) => {
+    if (!ownerTokenMatches(presentedToken(req), config.ownerTokenHash)) {
       res.status(401).type("html").send(loginPage("That token is not valid."));
       return;
     }
-    res.cookie(OWNER_COOKIE, createSessionCookie(config.sessionSecret, ctx.now()), {
+    res.cookie(OWNER_COOKIE, createSessionCookie(sessionKey, ctx.now()), {
       ...cookieOptions,
       maxAge: SESSION_TTL_MS,
     });
     res.redirect(303, "/owner");
   });
 
-  router.post("/owner/logout", formBody, sameOrigin, (_req, res) => {
+  router.post("/owner/logout", formBody, sameOrigin, requireSession, (_req, res) => {
+    notBeforeMs = ctx.now();
     res.clearCookie(OWNER_COOKIE, cookieOptions);
     res.redirect(303, LOGIN_PATH);
   });

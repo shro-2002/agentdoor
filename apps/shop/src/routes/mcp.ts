@@ -47,7 +47,7 @@ async function dispatch(ctx: ServiceContext, req: Request, res: Response): Promi
 export function mcpRouter(ctx: ServiceContext, limiters: Limiters): Router {
   const router = Router();
 
-  router.post("/mcp", jsonBody, async (req, res) => {
+  router.post("/mcp", limiters.mcpCoarse, jsonBody, async (req, res) => {
     const msg: unknown = req.body;
     // Batches are refused: each message must be charged to its own bucket, and MCP 2025-06 dropped them.
     if (!isRpcObject(msg)) return sendError(req, res, "VALIDATION_FAILED", { message: "Send one JSON-RPC message per request." });

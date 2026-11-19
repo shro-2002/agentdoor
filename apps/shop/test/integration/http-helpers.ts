@@ -86,6 +86,8 @@ export interface StartOptions {
   trustProxyHops?: number;
   /** Replaces the DB pool the app uses, e.g. one that points at a dead port. */
   appPool?: Pool;
+  /** Overrides on top of the default test config, e.g. a different owner token hash. */
+  config?: Partial<ShopConfig>;
 }
 
 export async function startShop(opts: StartOptions = {}): Promise<TestShop> {
@@ -95,7 +97,7 @@ export async function startShop(opts: StartOptions = {}): Promise<TestShop> {
   const clock = { now: NOW_MS };
   const launch = loadLaunchState(bundle(opts), keys.publicKey);
   const app = createApp({
-    config,
+    config: { ...config, ...opts.config },
     pool: opts.appPool ?? pool,
     launch,
     now: () => clock.now,

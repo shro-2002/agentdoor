@@ -8,6 +8,11 @@ const OWNER_AUTH_WINDOW_MS = 15 * MINUTE_MS;
 
 /** 04 §4. Each bucket has its own in-memory store, so one cannot starve another. */
 export const LIMITS = {
+  /**
+   * Not in 04 §4: a blunt cap on every POST /mcp, before the body is parsed, so malformed bodies
+   * cost something too. Set at 2.5x mcp-read so honest traffic never meets it.
+   */
+  mcpCoarse: { limit: 300, windowMs: MINUTE_MS },
   mcpRead: { limit: 120, windowMs: MINUTE_MS },
   quoteRest: { limit: 60, windowMs: MINUTE_MS },
   orderCreate: { limit: 20, windowMs: MINUTE_MS },
@@ -18,6 +23,7 @@ export const LIMITS = {
 } as const;
 
 export interface Limiters {
+  mcpCoarse: RequestHandler;
   mcpRead: RequestHandler;
   quoteRest: RequestHandler;
   orderCreate: RequestHandler;
@@ -47,6 +53,7 @@ export function createLimiters(log: Logger): Limiters {
       },
     });
   return {
+    mcpCoarse: make("mcpCoarse"),
     mcpRead: make("mcpRead"),
     quoteRest: make("quoteRest"),
     orderCreate: make("orderCreate"),

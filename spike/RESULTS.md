@@ -1,4 +1,4 @@
-# T01 spike results (complete except gateway-to-inbox delivery, see "Still open")
+# T01 spike results (complete)
 
 ## Done (2026-11-18, gddy 0.2.37)
 | Step | Command | Result / timing |
@@ -26,6 +26,7 @@
 - Phone on mobile data, PREFIX URL `/spike/ip`: `remoteAddress` `::ffff:127.0.0.1`, `xForwardedFor` and `cfConnectingIp` both one IP (different from the laptop), no X-Real-IP/Forwarded/Via. Same one-hop pattern on two networks, so `trust proxy = 1` is confirmed.
 - Inbound mail: a Gmail message to hello@agentdoor.shop arrived in the Titan inbox at 9:09 am IST. The GoDaddy `secureserver.net` MX records deliver to the mailbox; no DNS change needed.
 
+- App-sent mail: both `POST /spike/mail` messages (12:46 am and 9:05 am IST) arrived in the hello@agentdoor.shop inbox (not spam), subject and body as sent. Sender display name is the app host id (`jf133lqfzu`), so the contact form should set an explicit, readable subject/name in the body.
+
 ## Still open
-1. App-sent mail (`POST /spike/mail`, gateway accepted at 03:35:53Z) not yet seen in the inbox. This is the path the contact form uses, so it must be confirmed (check inbox and spam).
-2. gddy 0.2.38 is available; not installed (needs owner consent).
+- gddy 0.2.38 is available; not installed (needs owner consent).

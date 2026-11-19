@@ -1,6 +1,5 @@
 import {
   BusinessPolicySchema,
-  CompileResultWireSchema,
   requiredPaths,
   type BusinessPolicy,
   type Lang,
@@ -12,6 +11,7 @@ import { now, todayIst } from "../claude/clock.js";
 import { HTTP_UNPROCESSABLE, LauncherError } from "../claude/errors.js";
 import { compileSystemPrompt } from "../prompts/load.js";
 import type { FsStore, Session } from "../store/fsStore.js";
+import { CompileApiSchema, toWire, type CompileApi, type CompileResultWire } from "./compile-api.js";
 import { deepEqual, getAt, related, setAt } from "./paths.js";
 import {
   DEFAULT_NOTE,
@@ -30,7 +30,7 @@ const READBACK_MAX = 500;
 const RUSH_CAP_PATH = "rush.maxRushUnitsPerDay";
 const COMPILE_FAILED_MESSAGE = "I couldn't read that — try rephrasing";
 
-export type CompileResultWire = z.infer<typeof CompileResultWireSchema>;
+export type { CompileResultWire };
 type Json = Record<string, unknown>;
 
 export interface ValidationIssue {
@@ -247,6 +247,12 @@ export function buildUserMessage(session: Session, round: number): string {
   return `Today's date (IST): ${todayIst()}\nOwner's language hint: ${session.language}\n${rules}\n\nTranscript turns:\n\n${turns}`;
 }
 
+/** API response -> contract wire shape -> policy with provenance. */
+function interpret(api: CompileApi, turns: string[], opts: { allowQuestions: boolean }): BuildOutcome {
+  const wire = toWire(api);
+  return wire.ok ? buildCompileResult(wire.wire, turns, opts) : { ok: false, issues: wire.issues };
+}
+
 /** Compiles the given session state, persisting the result as the next version. */
 export async function compileState(deps: Deps, session: Session): Promise<CompileResponse> {
   const round = session.clarifyUsed ? 1 : 0;
@@ -260,11 +266,11 @@ export async function compileState(deps: Deps, session: Session): Promise<Compil
       effort: COMPILE_EFFORT,
       system: compileSystemPrompt(),
       user: buildUserMessage(session, round),
-      wireSchema: CompileResultWireSchema,
+      wireSchema: CompileApiSchema,
       maxTokens: COMPILE_MAX_TOKENS,
       sessionId: session.id,
-      validate: (w) => {
-        const out = buildCompileResult(w, session.turns, opts);
+      validate: (api) => {
+        const out = interpret(api, session.turns, opts);
         return out.ok || out.noBusiness ? [] : out.issues;
       },
     })
@@ -273,9 +279,9 @@ export async function compileState(deps: Deps, session: Session): Promise<Compil
         throw new LauncherError("COMPILE_INVALID", COMPILE_FAILED_MESSAGE, HTTP_UNPROCESSABLE);
       throw e;
     });
-  const { data: wire, usage, costUsd, fromFixture } = await call;
+  const { data: api, usage, costUsd, fromFixture } = await call;
 
-  const out = buildCompileResult(wire, session.turns, opts);
+  const out = interpret(api, session.turns, opts);
   if (!out.ok)
     throw new LauncherError(
       out.noBusiness ? "NO_BUSINESS_FOUND" : "COMPILE_INVALID",
@@ -291,7 +297,7 @@ export async function compileState(deps: Deps, session: Session): Promise<Compil
     fromFixture,
     usage,
     costUsd,
-    raw: wire,
+    raw: api,
     result: { ...rest, validation },
   });
   return { version, compileResult: { ...rest, policy }, validation };

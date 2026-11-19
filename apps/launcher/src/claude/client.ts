@@ -1,8 +1,8 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Anthropic from "@anthropic-ai/sdk";
-import { toWireJsonSchema } from "@agentdoor/core";
 import type { ZodType } from "zod";
+import { outputSchemaFor } from "./schema.js";
 import {
   BudgetGuard,
   DEFAULT_MAX_USD_PER_SESSION,
@@ -135,7 +135,7 @@ export class ClaudeClient {
 
   async callStructured<T>(c: ClaudeCall<T>): Promise<CallResult<T>> {
     fixturePath(this.fixturesDir, c.fixtureId); // rejects ids that could escape the directory
-    const schema = toWireJsonSchema(c.wireSchema);
+    const schema = outputSchemaFor(c.wireSchema);
     const hash = promptHash(c.system, schema);
     const fetchAttempt =
       this.mode === "replay" ? this.replaySource(c, hash) : this.liveSource(c, schema);

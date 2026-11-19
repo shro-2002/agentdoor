@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { PolicyDraftWireSchema } from "@agentdoor/core";
+import { outputSchemaFor } from "../claude/schema.js";
 import { renderDefaults } from "../flows/template.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -11,9 +13,8 @@ let cached: string | null = null;
  * date: today's date goes in the user turn.
  */
 export function compileSystemPrompt(): string {
-  cached ??= readFileSync(path.join(HERE, "compile.md"), "utf8").replace(
-    "{{TEMPLATE_DEFAULTS}}",
-    renderDefaults(),
-  );
+  cached ??= readFileSync(path.join(HERE, "compile.md"), "utf8")
+    .replace("{{POLICY_DRAFT_SCHEMA}}", () => JSON.stringify(outputSchemaFor(PolicyDraftWireSchema)))
+    .replace("{{TEMPLATE_DEFAULTS}}", () => renderDefaults());
   return cached;
 }

@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { BusinessPolicySchema, requiredPaths } from "@agentdoor/core";
 import { buildCompileResult, compileSession, isVerbatim } from "../../src/flows/compile.js";
-import { liveClient, newStore, wireFromPolicy } from "./helpers.js";
+import { apiText, liveClient, newStore, wireFromPolicy } from "./helpers.js";
 
 function built(mutate?: (w: ReturnType<typeof wireFromPolicy>["wire"]) => void, transcriptExtra = "") {
   const { wire, transcript } = wireFromPolicy();
@@ -172,7 +172,7 @@ describe("compileSession persistence (U-CMP-6)", () => {
     const { store, wire, session } = start();
     const broken = structuredClone(wire);
     broken.policyDraft.catalog[0]!.unitPricePaise = 0;
-    const { client, create } = liveClient([{ text: JSON.stringify(broken) }, { text: JSON.stringify(wire) }]);
+    const { client, create } = liveClient([{ text: apiText(broken) }, { text: apiText(wire) }]);
     const res = await compileSession({ client, store }, session.id);
     expect(res.version).toBe(1);
     expect(create).toHaveBeenCalledTimes(2);
@@ -187,7 +187,7 @@ describe("compileSession persistence (U-CMP-6)", () => {
     const { store, wire, session } = start();
     const broken = structuredClone(wire);
     broken.policyDraft.catalog[0]!.unitPricePaise = 0;
-    const { client, create } = liveClient([{ text: JSON.stringify(broken) }, { text: JSON.stringify(broken) }]);
+    const { client, create } = liveClient([{ text: apiText(broken) }, { text: apiText(broken) }]);
     await expect(compileSession({ client, store }, session.id)).rejects.toMatchObject({
       code: "COMPILE_INVALID",
       message: expect.stringContaining("try rephrasing"),
@@ -199,7 +199,7 @@ describe("compileSession persistence (U-CMP-6)", () => {
 
   it("recompiling creates v2 without touching v1", async () => {
     const { store, wire, session } = start();
-    const { client } = liveClient([{ text: JSON.stringify(wire) }, { text: JSON.stringify(wire) }]);
+    const { client } = liveClient([{ text: apiText(wire) }, { text: apiText(wire) }]);
     await compileSession({ client, store }, session.id);
     const v1 = store.readPolicy(session.id, 1);
     await compileSession({ client, store }, session.id);
@@ -209,8 +209,39 @@ describe("compileSession persistence (U-CMP-6)", () => {
 
   it("a transcript with no business (policyDraft null) is NO_BUSINESS_FOUND and writes nothing", async () => {
     const { store, wire, session } = start();
-    const { client } = liveClient([{ text: JSON.stringify({ ...wire, policyDraft: null, evidence: [] }) }]);
+    const { client } = liveClient([{ text: apiText({ ...wire, policyDraft: null, evidence: [] }) }]);
     await expect(compileSession({ client, store }, session.id)).rejects.toMatchObject({ code: "NO_BUSINESS_FOUND" });
     expect(store.latestVersion(session.id)).toBe(0);
+  });
+});
+
+describe("policy as JSON text (compile-api.ts)", () => {
+  it("the compile prompt carries the policy JSON Schema and no unfilled placeholders", async () => {
+    const { compileSystemPrompt } = await import("../../src/prompts/load.js");
+    const prompt = compileSystemPrompt();
+    expect(prompt).not.toContain("{{");
+    expect(prompt).toContain('"unitPricePaise":{"type":"integer"}');
+    expect(prompt).toContain("rush.maxRushUnitsPerDay = 3");
+    expect(prompt).not.toMatch(/20\d\d-\d\d-\d\d/); // date-free so the cache prefix is stable
+  });
+
+  it("text that is not JSON takes the repair attempt, which names policyDraftJson", async () => {
+    const { wire, transcript } = wireFromPolicy();
+    const garbled = JSON.stringify({ ...JSON.parse(apiText(wire)), policyDraftJson: '{"schemaVersion": 1,' });
+    const { client, create } = liveClient([{ text: garbled }, { text: apiText(wire) }]);
+    const store = newStore();
+    const session = store.createSession({ language: "en", transcript, fixtureKey: "unit" });
+    await compileSession({ client, store }, session.id);
+    const second = (create.mock.calls[1]![0] as unknown as { messages: { content: string }[] }).messages;
+    expect(second[2]!.content).toContain("policyDraftJson");
+  });
+
+  it("a policy missing required keys is reported with the key path", async () => {
+    const { toWire } = await import("../../src/flows/compile-api.js");
+    const { wire } = wireFromPolicy();
+    const { catalog: _c, ...noCatalog } = wire.policyDraft;
+    const out = toWire({ ...wire, policyDraftJson: JSON.stringify(noCatalog) } as never);
+    expect(out.ok).toBe(false);
+    if (!out.ok) expect(out.issues.join("\n")).toContain("policyDraftJson.catalog");
   });
 });

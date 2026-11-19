@@ -3,8 +3,10 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { CompileResultWireSchema, toWireJsonSchema } from "@agentdoor/core";
+import { CompileApiSchema } from "../../src/flows/compile-api.js";
 import { ClaudeClient, type ClaudeCall } from "../../src/claude/client.js";
 import { costUsd } from "../../src/claude/pricing.js";
+import { outputSchemaFor } from "../../src/claude/schema.js";
 import { liveClient, tmpDir } from "../compile/helpers.js";
 
 const Out = z.strictObject({ answer: z.string(), n: z.number() });
@@ -64,6 +66,14 @@ describe("ClaudeClient request shape (CLAUDE.md API rules)", () => {
     await client.callStructured(call());
     const p = create.mock.calls[0]![0] as unknown as { output_config: { format: { schema: unknown } } };
     expect(violations(p.output_config.format.schema)).toEqual([]);
+    const compile = outputSchemaFor(CompileApiSchema);
+    expect(violations(compile)).toEqual([]);
+    const text = JSON.stringify(compile);
+    expect(text).not.toMatch(/"type":\[/); // nullable fields are anyOf [T, null], not type arrays
+    expect(text).not.toContain("$schema");
+    expect(text).not.toContain('"type":"number"'); // integers only: smaller grammar
+    expect(text).toContain('"type":"integer"');
+    expect(text).toContain('"anyOf":[{"type":"string"},{"type":"null"}]');
   });
 });
 

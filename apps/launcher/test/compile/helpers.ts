@@ -67,6 +67,12 @@ export function wireFromPolicy(policy: BusinessPolicy = bakery as unknown as Bus
   return { wire, transcript };
 }
 
+/** The text a model would return for a wire result: the policy travels as JSON text (compile-api.ts). */
+export function apiText(wire: { policyDraft: unknown } & Record<string, unknown>): string {
+  const { policyDraft, ...rest } = wire;
+  return JSON.stringify({ ...rest, policyDraftJson: JSON.stringify(policyDraft) });
+}
+
 interface FakeReply {
   text: string;
   stop_reason?: string;

@@ -12,6 +12,8 @@ export default defineConfig({
   timeout: 90_000,
   expect: { timeout: 15_000 },
   workers: 1,
+  // Builds a fixture-mode launch and starts in-process shops for the shop specs (closed in teardown).
+  globalSetup: "./e2e/support/global-setup.ts",
   reporter: [["list"]],
   use: { baseURL: `http://127.0.0.1:${PORT}`, trace: "off" },
   webServer: {

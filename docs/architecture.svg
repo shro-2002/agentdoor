@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" width="1200" height="760" role="img" aria-labelledby="t d" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <title id="t">AgentDoor architecture</title>
+  <desc id="d">The owner uses a local launcher that calls the Anthropic API to compile, clarify and write scenarios, rehearses the policy, passes a launch gate and deploys to GoDaddy. On GoDaddy, a Node.js shop serves a storefront, REST, an MCP endpoint, an owner dashboard and a public replay, backed by managed MySQL, a domain with HTTPS and a mailbox. Customers and their AI agents reach the shop. No model runs in the price path.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#333"/></marker>
+  </defs>
+  <rect width="1200" height="760" fill="#fffaf3"/>
+  <text x="600" y="38" text-anchor="middle" font-size="24" font-weight="700" fill="#222">AgentDoor: from a baker's words to a rehearsed, live shop</text>
+
+  <!-- Owner -->
+  <rect x="40" y="70" width="300" height="70" rx="10" fill="#fff" stroke="#333" stroke-width="2"/>
+  <text x="190" y="102" text-anchor="middle" font-size="18" font-weight="700" fill="#222">Owner (home baker)</text>
+  <text x="190" y="126" text-anchor="middle" font-size="14" fill="#444">browser on localhost, EN / Hindi / Hinglish</text>
+
+  <!-- Launcher -->
+  <rect x="40" y="190" width="440" height="400" rx="12" fill="#eef4ff" stroke="#2b5fb8" stroke-width="2"/>
+  <text x="60" y="222" font-size="20" font-weight="700" fill="#1d4684">LAUNCHER (local, owner's laptop)</text>
+  <g font-size="15" fill="#222">
+    <text x="64" y="256">Claude compiler: policy + provenance quotes</text>
+    <text x="64" y="284">Clarifier: asks only what is missing</text>
+    <text x="64" y="312">Scenario writer: tricky customer cases</text>
+    <text x="64" y="352">Rehearsal: probes + scenarios, gaps listed</text>
+    <text x="64" y="380">Owner approves every rule</text>
+    <text x="64" y="408">Launch gate: no unapproved rule, no critical gap</text>
+    <text x="64" y="436">Signed launch record bound to the policy hash</text>
+    <text x="64" y="476">Deploy adapter: gddy CLI + Hosting API</text>
+    <text x="64" y="504">Deterministic core engine (same package as shop)</text>
+    <text x="64" y="540">State on disk: policy versions, usage log</text>
+  </g>
+  <line x1="190" y1="140" x2="190" y2="188" stroke="#333" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- Anthropic -->
+  <rect x="60" y="650" width="400" height="70" rx="10" fill="#fdecec" stroke="#b03a3a" stroke-width="2"/>
+  <text x="260" y="682" text-anchor="middle" font-size="18" font-weight="700" fill="#7a1f1f">Anthropic API (Claude)</text>
+  <text x="260" y="706" text-anchor="middle" font-size="14" fill="#444">called from the launcher only, before launch</text>
+  <line x1="260" y1="592" x2="260" y2="648" stroke="#b03a3a" stroke-width="2" marker-end="url(#a)"/>
+  <text x="272" y="626" font-size="13" fill="#7a1f1f">HTTPS 443</text>
+
+  <!-- GoDaddy -->
+  <rect x="640" y="70" width="520" height="650" rx="12" fill="#eefaf0" stroke="#2f7d3b" stroke-width="2"/>
+  <text x="660" y="102" font-size="20" font-weight="700" fill="#1f5a29">GODADDY</text>
+  <rect x="660" y="120" width="480" height="300" rx="10" fill="#fff" stroke="#2f7d3b" stroke-width="1.5"/>
+  <text x="680" y="148" font-size="17" font-weight="700" fill="#1f5a29">Node.js hosting: the shop</text>
+  <g font-size="15" fill="#222">
+    <text x="680" y="180">Storefront  /  /order  /contact</text>
+    <text x="680" y="206">REST  /api/*</text>
+    <text x="680" y="232">MCP  /mcp: get_business_info, get_quote, place_order</text>
+    <text x="680" y="258">Owner dashboard  /owner  (confirms pending orders)</text>
+    <text x="680" y="284">Launch report  /launch-report</text>
+    <text x="680" y="310">Public replay  /try  (recorded Claude, live engine)</text>
+    <text x="680" y="336">Deterministic engine: prices, capacity, refusals</text>
+    <text x="680" y="362">Ed25519 signed quotes that expire</text>
+    <text x="680" y="388">Boot guard: policy hash must match launch record</text>
+  </g>
+  <rect x="660" y="440" width="230" height="80" rx="8" fill="#fff" stroke="#2f7d3b" stroke-width="1.5"/>
+  <text x="775" y="470" text-anchor="middle" font-size="16" font-weight="700" fill="#1f5a29">Managed MySQL</text>
+  <text x="775" y="494" text-anchor="middle" font-size="13" fill="#444">orders, atomic capacity</text>
+  <rect x="910" y="440" width="230" height="80" rx="8" fill="#fff" stroke="#2f7d3b" stroke-width="1.5"/>
+  <text x="1025" y="470" text-anchor="middle" font-size="16" font-weight="700" fill="#1f5a29">Domain + HTTPS</text>
+  <text x="1025" y="494" text-anchor="middle" font-size="13" fill="#444">agentdoor.shop via platform CDN</text>
+  <rect x="660" y="540" width="480" height="70" rx="8" fill="#fff" stroke="#2f7d3b" stroke-width="1.5"/>
+  <text x="900" y="570" text-anchor="middle" font-size="16" font-weight="700" fill="#1f5a29">Mailbox on the domain (Titan)</text>
+  <text x="900" y="594" text-anchor="middle" font-size="13" fill="#444">contact form arrives via the platform mail gateway</text>
+  <line x1="775" y1="420" x2="775" y2="438" stroke="#2f7d3b" stroke-width="2"/>
+  <line x1="900" y1="610" x2="900" y2="632" stroke="#2f7d3b" stroke-width="2"/>
+  <text x="900" y="660" text-anchor="middle" font-size="13" fill="#444">Customers reach the shop through the domain</text>
+
+  <!-- Launcher -> GoDaddy -->
+  <line x1="480" y1="490" x2="638" y2="330" stroke="#333" stroke-width="2.5" marker-end="url(#a)"/>
+  <text x="498" y="380" font-size="14" fill="#222" font-weight="700">deploy</text>
+  <text x="498" y="398" font-size="13" fill="#222">upload, secrets,</text>
+  <text x="498" y="414" font-size="13" fill="#222">publish, smoke test</text>
+  <line x1="480" y1="300" x2="638" y2="300" stroke="#333" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#a)"/>
+  <text x="494" y="290" font-size="13" fill="#222">bundled replay</text>
+
+  <!-- Customers -->
+  <rect x="640" y="738" width="1" height="1" fill="none"/>
+  <rect x="500" y="640" width="1" height="1" fill="none"/>
+
+  <!-- Callout -->
+  <rect x="500" y="440" width="120" height="1" fill="none"/>
+  <g>
+    <rect x="490" y="500" width="140" height="1" fill="none"/>
+  </g>
+  <rect x="488" y="520" width="146" height="96" rx="10" fill="#fff3b0" stroke="#a37b00" stroke-width="2.5"/>
+  <text x="561" y="546" text-anchor="middle" font-size="15" font-weight="700" fill="#4a3600">No model in</text>
+  <text x="561" y="566" text-anchor="middle" font-size="15" font-weight="700" fill="#4a3600">the price path</text>
+  <text x="561" y="590" text-anchor="middle" font-size="12" fill="#4a3600">shop makes zero</text>
+  <text x="561" y="604" text-anchor="middle" font-size="12" fill="#4a3600">model calls</text>
+</svg>

@@ -133,3 +133,4 @@ R0 run 2026-11-18 19:10 IST. Verdict: **CONDITIONAL GO**. All P0 fixes applied t
 
 ## Open issues / requests between lanes
 <!-- lane B → lane A core change requests go here -->
+- T13c — 2026-11-19 — **done** — submission docs: README.md, docs/BRIEF.md, docs/architecture.svg, docs/demo-script.md (docs only, no code changed).

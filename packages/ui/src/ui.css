@@ -81,6 +81,18 @@ a:hover {
   background: transparent;
   color: var(--ink);
 }
+.btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--saffron);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.btn--ghost:hover {
+  background: var(--saffron-bg);
+  color: var(--ink);
+  box-shadow: none;
+}
 .btn--danger {
   background: var(--chili);
   border-color: var(--chili);

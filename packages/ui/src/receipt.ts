@@ -70,10 +70,16 @@ export function receiptGroups(run: RunLike, cards: CardLike[], text: ReceiptText
   }
   const titles = new Map(cards.map((c) => [c.gapId, c.title]));
   const probeGap = (id: string): boolean => id.startsWith("ENGINE_PROBE_FAILED:") || id.startsWith("PROBE_NEEDS_OWNER:");
+  // Rule gaps with the same wording (25 "a rule is waiting for your OK") print as one line with a count.
+  const ruleGaps = new Map<string, { first: string; n: number }>();
   for (const g of run.gaps) {
     if (g.dismissed || scenarioGapIds.has(g.id) || probeGap(g.id) || g.code === "SCENARIO_UNHANDLED") continue;
-    push("rules", toLine("gap", titles.get(g.id) ?? g.code, g.id));
+    const title = titles.get(g.id) ?? g.code;
+    const seen = ruleGaps.get(title);
+    if (seen) seen.n++;
+    else ruleGaps.set(title, { first: g.id, n: 1 });
   }
+  for (const [title, { first, n }] of ruleGaps) push("rules", toLine("gap", n > 1 ? `${title} ×${n}` : title, first));
   const rank = { gap: 0, failed: 0, pass: 1 } as const;
   return GROUP_ORDER.flatMap((id) => {
     const sorted = [...lines.get(id)!].sort((a, b) => rank[a.status] - rank[b.status]);

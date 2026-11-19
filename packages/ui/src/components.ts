@@ -109,6 +109,7 @@ export function ruleCard(p: RuleCardProps): SafeHtml {
       ${ruleChip(p.state, l)}
       <div class="rule__actions">
         ${approved ? "" : html`<button type="button" class="btn btn--primary" data-action="approve" data-path="${p.path}" aria-label="${l.approve}: ${p.title}">${l.approve}</button>`}
+        ${p.quote ? html`<button type="button" class="btn btn--ghost" data-action="show-source" data-path="${p.path}" aria-label="${l.showSource}: ${p.title}">${l.showSource}</button>` : ""}
         ${p.edit ? html`<button type="button" class="btn btn--secondary" data-action="edit" data-path="${p.path}" aria-label="${l.edit}: ${p.title}">${icon("pencil")}${l.edit}</button>` : ""}
       </div>
     </div>
@@ -136,6 +137,8 @@ export interface ReceiptSlipProps {
   /** Monospace sub-line, e.g. the policy fingerprint and date. */
   subtitle?: string;
   groups: ReceiptGroup[];
+  /** True totals when long PASS runs are folded into one line; defaults to counting the printed lines. */
+  totals?: { pass: number; gap: number; failed: number };
   labels?: { pass?: string; gap?: string; failed?: string; seeFix?: string; total?: string };
 }
 
@@ -154,7 +157,7 @@ export function receiptSlip(p: ReceiptSlipProps): SafeHtml {
   const l = p.labels ?? {};
   const tags: Record<LineStatus, string> = { pass: l.pass ?? "PASS", gap: l.gap ?? "GAP", failed: l.failed ?? "FAILED" };
   const all = p.groups.flatMap((g) => g.lines);
-  const n = (s: LineStatus): number => all.filter((x) => x.status === s).length;
+  const n = (s: LineStatus): number => p.totals?.[s] ?? all.filter((x) => x.status === s).length;
   return html`<section class="receipt" id="receipt" aria-labelledby="receipt-title">
     <header class="receipt__head">
       <p class="receipt__brand">${icon("receipt")}<span>AgentDoor</span></p>

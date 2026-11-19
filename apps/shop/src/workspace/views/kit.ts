@@ -1,4 +1,5 @@
 import { html, raw, type SafeHtml } from "@agentdoor/ui";
+import { brandMark } from "./icons.js";
 
 export const FONT_URL = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap";
 
@@ -6,7 +7,6 @@ export interface DocumentOptions {
   title: string;
   body: SafeHtml;
   bodyClass?: string;
-  /** Page-specific data attributes for workspace.js (e.g. the job to poll). */
   noindex?: boolean;
 }
 
@@ -18,7 +18,8 @@ export function pageDocument(o: DocumentOptions): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${o.title}</title>
-<meta name="color-scheme" content="light">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0B0B0F">
 ${o.noindex === false ? "" : raw('<meta name="robots" content="noindex">')}
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,15 +34,11 @@ ${o.body}
 </html>`.value;
 }
 
-export const brand = (href: string): SafeHtml => html`<a class="brand" href="${href}"><span class="brand__mark" aria-hidden="true"></span>AgentDoor</a>`;
+export const brand = (href: string): SafeHtml => html`<a class="brand" href="${href}">${brandMark()}<span class="brand__word">AgentDoor</span></a>`;
 
 export type Tone = "ok" | "warn" | "bad" | "info" | "mute";
 
 export const badge = (tone: Tone, text: string): SafeHtml => html`<span class="badge badge--${tone}">${text}</span>`;
-
-const CHECK_PATH = "M3.5 8.5l3 3 6-7";
-export const checkMark = (): SafeHtml =>
-  raw(`<svg class="tick" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="${CHECK_PATH}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`);
 
 /** A POST form. There is no token: the server requires a same-origin Origin header on every POST. */
 export const postForm = (action: string, inner: SafeHtml, className = ""): SafeHtml =>

@@ -2,9 +2,11 @@ import { html, type SafeHtml } from "@agentdoor/ui";
 import type { Readiness } from "../readiness.js";
 import type { DraftState, JobRow } from "../state.js";
 import { nextQuestion } from "../questions.js";
-import { badge, brand, notice, pageDocument, postForm, type Tone } from "./kit.js";
+import { icon, type IconName } from "./icons.js";
+import { brand, notice, pageDocument, type Tone } from "./kit.js";
 
 export type Tab = "overview" | "setup" | "products" | "rules" | "rehearse" | "storefront";
+export type Device = "desktop" | "phone";
 
 export interface ViewCtx {
   id: string;
@@ -20,21 +22,32 @@ export interface ViewCtx {
   prepared: boolean;
   /** Absolute origin for links the owner copies. */
   origin: string;
+  /** Server time, so a running job's elapsed time never depends on the visitor's clock. */
+  nowMs: number;
+  /** Which preview frame the Storefront tab shows. */
+  device: Device;
   /** Rounds left for AI steps (compile, scenarios). */
   roundsLeft: { compile: number; scenarios: number };
 }
 
-const TABS: { key: Tab; label: string; path: string }[] = [
-  { key: "overview", label: "Overview", path: "" },
-  { key: "setup", label: "Setup", path: "/setup" },
-  { key: "products", label: "Products", path: "/products" },
-  { key: "rules", label: "Rules", path: "/rules" },
-  { key: "rehearse", label: "Rehearse", path: "/rehearse" },
-  { key: "storefront", label: "Storefront", path: "/storefront" },
+export interface PageHead {
+  title: string;
+  lede?: string;
+  /** Contextual actions, pinned in the sticky header. */
+  actions?: SafeHtml;
+}
+
+const TABS: { key: Tab; label: string; path: string; icon: IconName }[] = [
+  { key: "overview", label: "Overview", path: "", icon: "overview" },
+  { key: "setup", label: "Setup", path: "/setup", icon: "setup" },
+  { key: "products", label: "Products", path: "/products", icon: "products" },
+  { key: "rules", label: "Rules", path: "/rules", icon: "rules" },
+  { key: "rehearse", label: "Rehearse", path: "/rehearse", icon: "rehearse" },
+  { key: "storefront", label: "Storefront", path: "/storefront", icon: "storefront" },
 ];
 
-/** Which steps are finished, for the quiet dot beside each nav item. */
-function done(ctx: ViewCtx): Record<Tab, boolean> {
+/** Which steps are finished, for the tick beside each nav item. */
+export function stepsDone(ctx: ViewCtx): Record<Tab, boolean> {
   const { state, ready } = ctx;
   const approved = ready.approvals.required > 0 && ready.approvals.approved === ready.approvals.required;
   return {
@@ -48,29 +61,35 @@ function done(ctx: ViewCtx): Record<Tab, boolean> {
 }
 
 function nav(ctx: ViewCtx, active: Tab): SafeHtml {
-  const finished = done(ctx);
-  return html`<nav class="side__nav" aria-label="Workspace"><ul>${TABS.map((t) => {
+  const finished = stepsDone(ctx);
+  return html`<nav class="rail__nav" aria-label="Workspace"><ul>${TABS.map((t) => {
     const here = t.key === active;
-    return html`<li><a href="${ctx.base}${t.path}"${here ? html` aria-current="page"` : ""} class="navlink${here ? " is-active" : ""}"><span class="dot${finished[t.key] ? " is-done" : ""}" aria-hidden="true"></span>${t.label}${finished[t.key] ? html`<span class="sr-only"> (done)</span>` : ""}</a></li>`;
+    return html`<li><a href="${ctx.base}${t.path}"${here ? html` aria-current="page"` : ""} class="navlink${here ? " is-active" : ""}">${icon(t.icon)}<span class="navlink__text">${t.label}</span>${finished[t.key] ? html`<span class="navlink__done">${icon("check")}</span><span class="sr-only"> (done)</span>` : ""}</a></li>`;
   })}</ul></nav>`;
 }
 
-export function frame(ctx: ViewCtx, active: Tab, title: string, content: SafeHtml): string {
+/** Five segments, one per step, and a plain-words line: the same facts as the ticks, at a glance. */
+function readyMeter(ctx: ViewCtx): SafeHtml {
+  const flags = TABS.slice(1).map((t) => stepsDone(ctx)[t.key]);
+  const n = flags.filter(Boolean).length;
+  const label = ctx.ready.canPublish ? "Ready to launch" : n === 0 ? "Just getting started" : `${n} of ${flags.length} steps done`;
+  return html`<div class="rail__ready${ctx.ready.canPublish ? " is-ready" : ""}"><p class="rail__ready-label">${label}</p><div class="segs" aria-hidden="true">${flags.map((on) => html`<span class="segs__s${on ? " is-on" : ""}"></span>`)}</div></div>`;
+}
+
+export function frame(ctx: ViewCtx, active: Tab, head: PageHead, content: SafeHtml): string {
   const biz = ctx.state.policy?.business;
   const label = TABS.find((t) => t.key === active)?.label ?? "";
   const body = html`<div class="app">
-    <aside class="side">
-      <div class="side__top">${brand("/launch")}</div>
-      <div class="side__biz">
-        <p class="side__name">${biz?.name ?? "Your business"}</p>
-        <p class="side__sub">${biz?.city ?? "Setting up"}</p>
-      </div>
+    <aside class="rail">
+      <div class="rail__brand">${brand("/launch")}</div>
+      <div class="rail__biz"><p class="rail__name">${biz?.name ?? "Your business"}</p><p class="rail__city">${biz?.city ?? "Setting up"}</p></div>
       ${nav(ctx, active)}
-      <p class="side__foot"><a href="/launch">New business</a></p>
+      ${readyMeter(ctx)}
+      <p class="rail__foot"><a href="/launch/mine">${icon("overview")}My businesses</a><a href="/launch">${icon("plus")}New business</a></p>
     </aside>
     <div class="content">
+      <header class="phead"><div class="phead__text"><h1 class="phead__title">${head.title}</h1>${head.lede ? html`<p class="phead__lede">${head.lede}</p>` : ""}</div>${head.actions ? html`<div class="phead__actions">${head.actions}</div>` : ""}</header>
       <main id="main" class="page" tabindex="-1">
-        <header class="page__head"><h1 class="page__title">${title}</h1></header>
         ${ctx.flash ? notice(ctx.flash.tone, ctx.flash.text) : ""}
         ${content}
       </main>
@@ -78,35 +97,3 @@ export function frame(ctx: ViewCtx, active: Tab, title: string, content: SafeHtm
   </div>`;
   return pageDocument({ title: `${label} · ${biz?.name ?? "AgentDoor"}`, body });
 }
-
-const JOB_WORDS: Record<string, { title: string; hint: string }> = {
-  compile: { title: "Reading your description", hint: "Claude is turning it into a business. This usually takes under a minute." },
-  clarify: { title: "Updating your business", hint: "Claude is applying your answers. This usually takes under a minute." },
-  rehearse: { title: "Rehearsing with customers", hint: "Claude is writing realistic customers, then the rules are tested against them. This can take a minute." },
-};
-
-/** A running job: the script polls it; without JavaScript the link reloads the page. */
-export function jobCard(ctx: ViewCtx, job: JobRow): SafeHtml {
-  const words = JOB_WORDS[job.kind] ?? JOB_WORDS.compile!;
-  return html`<section class="card job" data-job-url="${ctx.base}/jobs/${job.id}.json" aria-live="polite">
-    <p class="job__title">${words.title}<span class="job__dots" aria-hidden="true"></span></p>
-    <div class="bar" aria-hidden="true"><span class="bar__fill"></span></div>
-    <p class="muted">${words.hint}</p>
-    <p class="job__link"><a href="${ctx.base}${pathOfKind(job.kind)}">Check progress</a></p>
-  </section>`;
-}
-
-const pathOfKind = (kind: string): string => (kind === "rehearse" ? "/rehearse" : "/setup");
-
-/** A failed job: plain words, and a retry when trying again can help. */
-export function failedCard(ctx: ViewCtx, job: JobRow, extra: SafeHtml = html``): SafeHtml {
-  return html`<section class="card card--bad" role="alert">
-    <p class="card__title">That did not finish</p>
-    <p>${job.errorMessage ?? "Something went wrong."}</p>
-    ${extra}
-    ${job.retryable ? postForm(`${ctx.base}/retry`, html`<button class="btn btn--primary" type="submit">Try again</button>`) : ""}
-  </section>`;
-}
-
-export const statTone = (n: number): Tone => (n === 0 ? "ok" : "warn");
-export { badge, notice, postForm };

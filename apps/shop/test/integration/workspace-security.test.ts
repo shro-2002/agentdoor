@@ -237,7 +237,7 @@ describe("failures", () => {
     expect(job.error!.message).not.toContain("secret-detail");
     const page = (await b.get(`/launch/w/${id}/setup`)).text;
     expect(page).toContain("Claude could not be reached");
-    expect(page).toContain("Try again");
+    expect(page).toContain("Retry");
     expect(page).not.toContain("secret-detail");
     const row = (await getDraft(shop.pool, id))!;
     expect(row.state.policy).toBeNull(); // no fallback business was invented
@@ -329,7 +329,7 @@ describe("publishing", () => {
     const { b, id } = await ready(shop);
     await clearEverything(b, id);
     const store = (await b.get(`/launch/w/${id}/storefront`)).text;
-    expect(store).toContain("Publishing needs the owner's authorization");
+    expect(store).toContain("Publishing to your own domain needs the owner");
     expect(store).not.toContain("Prepare for publishing");
     expect((await b.post(`/launch/w/${id}/prepare`)).status).toBe(403);
     expect(Number(((await shop.pool.query("SELECT COUNT(*) AS n FROM ws_publish"))[0] as { n: number }[])[0]!.n)).toBe(0);

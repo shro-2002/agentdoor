@@ -26,3 +26,16 @@ describe("SEC-5 the CSP lets no inline or eval script run", () => {
     expect(headersFor("/try")["Content-Security-Policy"]).toContain("frame-src https://www.youtube-nocookie.com");
   });
 });
+
+describe("the preview may be framed by this site only", () => {
+  const ancestors = (path: string): string => /frame-ancestors [^;]+/.exec(headersFor(path)["Content-Security-Policy"]!)![0];
+
+  it("/launch/p/* allows same-origin framing; every other page forbids framing", () => {
+    expect(ancestors("/launch/p/" + "a".repeat(32))).toBe("frame-ancestors 'self'");
+    expect(headersFor("/launch/p/" + "a".repeat(32))["X-Frame-Options"]).toBe("SAMEORIGIN");
+    for (const path of ["/", "/launch", "/launch/w/" + "a".repeat(32) + "/storefront", "/order", "/owner", "/try"]) {
+      expect(ancestors(path), path).toBe("frame-ancestors 'none'");
+      expect(headersFor(path)["X-Frame-Options"], path).toBe("DENY");
+    }
+  });
+});

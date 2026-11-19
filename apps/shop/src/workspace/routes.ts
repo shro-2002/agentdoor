@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { Router, type Request, type RequestHandler, type Response } from "express";
-import { z } from "zod";
 import { formBody } from "../http/body.js";
 import { requireSameOrigin } from "../security/origin.js";
 import type { OwnerAuth } from "../security/owner-auth.js";
@@ -8,8 +7,8 @@ import type { Limiters } from "../security/rate-limits.js";
 import type { ServiceContext } from "../services/context.js";
 import { previewStorefrontPage } from "../views/storefront.js";
 import { buildCards } from "./cards.js";
-import { LIMITS, accessCodeMatches, type WorkspaceConfig } from "./config.js";
-import { COOKIE_MAX_AGE_MS, WORKSPACE_COOKIE, isId, newId, readDraftIds, signDraftCookie } from "./cookie.js";
+import { LIMITS, type WorkspaceConfig } from "./config.js";
+import { isId, newId, readDraftIds } from "./cookie.js";
 import {
   EditError,
   RULE_SECTIONS,
@@ -30,28 +29,24 @@ import { WorkspaceJobs, type StartResult } from "./jobs.js";
 import { applyFix, commitPolicy } from "./ops.js";
 import { nextQuestion, recordAnswer } from "./questions.js";
 import { buildPackage, readiness } from "./readiness.js";
-import { emptyState, type DraftRow, type DraftState } from "./state.js";
-import { getDraft, getDraftByPreview, getPrepared, hit, peekHits, pruneHits, savePrepared, setPreviewId, updateState, createDraft } from "./store.js";
+import { HTTP } from "./route-kit.js";
+import { registerStart } from "./start-routes.js";
+import type { DraftRow, DraftState } from "./state.js";
+import { getDraft, getDraftByPreview, getPrepared, hit, savePrepared, setPreviewId, updateState } from "./store.js";
 import { overviewPage } from "./views/overview.js";
 import { rehearsePage } from "./views/rehearse.js";
-import { productsPage, rulesPage } from "./views/rules.js";
+import { productsPage } from "./views/products.js";
+import { rulesPage } from "./views/rules.js";
 import { setupPage } from "./views/setup.js";
-import { startPage, messagePage } from "./views/start.js";
+import { messagePage } from "./views/start.js";
 import { storefrontTabPage } from "./views/storefront-tab.js";
 import type { Tab, ViewCtx } from "./views/frame.js";
 import type { Tone } from "./views/kit.js";
 
-const HOUR_MS = 3_600_000;
 const MINUTE_MS = 60_000;
 const FLASH_COOKIE = "ad_flash";
 const FLASH_MAX_AGE_MS = 60_000;
-const HTTP = { forbidden: 403, notFound: 404, conflict: 409, tooMany: 429, unavailable: 503, badRequest: 400 } as const;
 const NEXT_TABS: Tab[] = ["products", "rules", "rehearse", "setup", "storefront"];
-
-const CreateSchema = z.object({
-  description: z.string().trim().min(10, "Please write a little more.").max(LIMITS.maxDescriptionChars, `Please keep it under ${LIMITS.maxDescriptionChars} characters.`),
-  code: z.string().max(200),
-});
 
 const str = (v: unknown, max = 400): string => (typeof v === "string" ? v.slice(0, max) : "");
 
@@ -92,35 +87,8 @@ export function createWorkspace(ctx: ServiceContext, limiters: Limiters, ownerAu
 
   const owned = (req: Request): string[] => readDraftIds(req.headers.cookie, config.sessionSecret, now());
 
-  // ---- start ---------------------------------------------------------------------------------
-
   router.use("/launch", limiters.workspace);
-
-  router.get("/launch", (req, res) => {
-    send(res, startPage({ closed: cfg.accessCode === null, flash: takeFlash(req, res) }));
-  });
-
-  router.post("/launch", formBody, sameOrigin, async (req, res) => {
-    const expected = cfg.accessCode;
-    if (expected === null) return send(res, startPage({ closed: true }), HTTP.unavailable);
-    const parsed = CreateSchema.safeParse({ description: str(req.body?.description, LIMITS.maxDescriptionChars + 50), code: str(req.body?.code, 200) });
-    const retry = (text: string, status: number): void => send(res, startPage({ closed: false, flash: { tone: "bad", text }, description: str(req.body?.description, LIMITS.maxDescriptionChars) }), status);
-    if (!parsed.success) return retry(parsed.error.issues[0]?.message ?? "Please check what you wrote.", HTTP.badRequest);
-    const ip = ipKey(req, "ip");
-    // Counted before the comparison: once an address has used its guesses, even the right code is refused.
-    if ((await peekHits(pool, "code_fail", ip, HOUR_MS, now())) >= LIMITS.wrongCodesPerIpPerHour) return retry("Too many wrong codes. Try again in an hour.", HTTP.tooMany);
-    if (!accessCodeMatches(parsed.data.code, expected)) {
-      await hit(pool, "code_fail", ip, HOUR_MS, LIMITS.wrongCodesPerIpPerHour, now());
-      return retry("That access code is not right.", HTTP.forbidden);
-    }
-    if (!(await hit(pool, "draft_new", ip, HOUR_MS, LIMITS.draftsPerIpPerHour, now()))) return retry("That is enough new businesses for now. Try again later.", HTTP.tooMany);
-    void pruneHits(pool, now()).catch(() => undefined);
-    const id = newId();
-    await createDraft(pool, id, ip.slice(0, 16), emptyState(parsed.data.description));
-    res.cookie(WORKSPACE_COOKIE, signDraftCookie(config.sessionSecret, [...owned(req), id], now()), { ...cookieBase, maxAge: COOKIE_MAX_AGE_MS });
-    await jobs.start(id, "compile");
-    res.redirect(303, `/launch/w/${id}/setup`);
-  });
+  registerStart({ router, pool, now, config, cfg, jobs, sameOrigin, cookieBase, send, ipKey, takeFlash, owned });
 
   // ---- one draft -------------------------------------------------------------------------------
 
@@ -159,6 +127,8 @@ export function createWorkspace(ctx: ServiceContext, limiters: Limiters, ownerAu
       previewPath: fresh.previewId ? `/launch/p/${fresh.previewId}` : null,
       prepared: prepared !== null,
       origin,
+      nowMs: now(),
+      device: req.query.device === "phone" ? "phone" : "desktop",
       roundsLeft: { compile: LIMITS.maxCompileRounds - fresh.compileRounds, scenarios: LIMITS.maxScenarioRuns - fresh.scenarioRuns },
     };
   }

@@ -42,12 +42,9 @@ describe("workspace: a whole journey with a fake Claude", () => {
     await b.post(`/launch/w/${id}/rehearse`, { mode: "full" });
     expect(await settle(b, shop, id)).toMatchObject({ kind: "rehearse", status: "done" });
     page = (await b.get(`/launch/w/${id}/rehearse`)).text;
-    expect(page).toContain("Business-policy gaps");
-    expect(page).toContain("Pending approvals");
-    expect(page).toContain("Scenario mismatches");
-    expect(page).toContain("Engine failures");
+    for (const title of ["Decisions to make", "Rules to confirm", "Customers who got the wrong answer", "Technical checks"]) expect(page).toContain(title);
     expect(page).toContain("Publishing is locked");
-    expect(page).toContain("Show evidence");
+    expect(page).toContain("See details");
     expect(page).toContain("Set limit"); // the capacity fix on the bulk-order scenario
   });
 

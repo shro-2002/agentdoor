@@ -6,8 +6,8 @@ Keep this under ~150 lines. Newest entries on top within each section. Each task
 - Phase: **SUBMISSION PREPARATION** (19 Nov 2026). The real Hinglish launch bundle (Meera's Kitchen, illustrative persona) is live on https://agentdoor.shop and the shop UI is styled.
 - Remaining: demo video, GitHub repository, submission.
 - Deadline: the public challenge page lists the submission time as 20 Nov 2026, 11:59 PM IST. Aim to submit well before it.
-- T14b (live `/launch` workspace) is built and tested but NOT deployed. Owner must set `WORKSPACE_ACCESS_CODE`, `ANTHROPIC_API_KEY`, `WORKSPACE_BUDGET_USD` (optional, default 10) in `.agentdoor/secrets/{preview,publish}.json`, then redeploy.
-- Tests: 531 unit and integration, 62 end-to-end, all passing. Public documents were reconciled with the live site on 19 Nov (see Review findings, R4).
+- T14a-d done: storefront redesign (T14a), live `/launch` workspace (T14b), premium redesign and open access via `WORKSPACE_OPEN=1` (T14c), content-hashed stylesheet and script URLs, final documentation pass (T14d). Workspace is live on https://agentdoor.shop/launch; 534 unit/integration and 62 end-to-end tests pass.
+- Tests: 534 unit and integration, 62 end-to-end, all passing. Public documents were reconciled with the live site on 19 Nov (see Review findings, R4).
 - Reviews done: **R2** (three-reviewer shop review) and **R4** (judge-style submission audit). No further reviews planned.
 
 ## Platform facts (public-safe; account details live in private account notes)

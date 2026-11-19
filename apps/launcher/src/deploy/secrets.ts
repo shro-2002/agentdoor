@@ -23,6 +23,19 @@ export const REQUIRED_SECRET_NAMES = [
   "PUBLIC_BASE_URL",
 ] as const;
 
+/**
+ * Optional names the shop reads when present. The workspace is closed unless WORKSPACE_ACCESS_CODE is set;
+ * ANTHROPIC_API_KEY is the runtime key for its live Claude calls; the budget is a plain number (USD).
+ * The owner adds these values to `.agentdoor/secrets/<variant>.json`; nothing here generates them.
+ */
+export const OPTIONAL_SECRET_NAMES = ["PLATFORM_BASE_URL", "ANTHROPIC_API_KEY", "WORKSPACE_ACCESS_CODE", "WORKSPACE_BUDGET_USD"] as const;
+
+/** Of the optional names, the ones whose value is a credential: never allowed inside a packed file. */
+export const PRIVATE_OPTIONAL_SECRET_NAMES = ["ANTHROPIC_API_KEY", "WORKSPACE_ACCESS_CODE"] as const;
+
+/** Everything `set-secrets.mjs` will send; the script keeps its own copy and a test keeps the two equal. */
+export const ALLOWED_SECRET_NAMES: readonly string[] = [...REQUIRED_SECRET_NAMES, ...OPTIONAL_SECRET_NAMES];
+
 export const secretsDir = (stateDir: string): string => join(stateDir, "secrets");
 const variantFile = (stateDir: string, v: Variant): string => join(secretsDir(stateDir), `${v.toLowerCase()}.json`);
 const readText = (p: string): string => readFileSync(p, "utf8").trim();
@@ -89,6 +102,10 @@ export function ensureSecretFiles(
     const missing = REQUIRED_SECRET_NAMES.filter((n) => !(n in current));
     if (missing.length > 0) {
       throw new DeployError("SECRETS_INVALID", `${v} secrets file lacks: ${missing.join(", ")}`);
+    }
+    const unknown = Object.keys(current).filter((n) => !ALLOWED_SECRET_NAMES.includes(n));
+    if (unknown.length > 0) {
+      throw new DeployError("SECRETS_INVALID", `${v} secrets file has names that are not allowed: ${unknown.join(", ")}`);
     }
     values.push(...Object.values(current));
   }

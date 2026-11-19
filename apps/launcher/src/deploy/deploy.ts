@@ -5,7 +5,7 @@ import { DeployError } from "./errors.js";
 import type { Gddy } from "./gddy.js";
 import { stdoutLog, type DeployLog } from "./log.js";
 import { ZIP_LEVEL_ARGS, pack, repack, type PackOptions, type PackResult } from "./pack.js";
-import { applySecrets, ensureSecretFiles, readSigningPublicKey, secretNames, type EnsureSecretsInput, type Variant } from "./secrets.js";
+import { PRIVATE_OPTIONAL_SECRET_NAMES, applySecrets, ensureSecretFiles, readSigningPublicKey, secretNames, type EnsureSecretsInput, type Variant } from "./secrets.js";
 import { readHealth, smoke, type FetchFn } from "./smoke.js";
 import { checkGate } from "./gate.js";
 
@@ -15,7 +15,7 @@ const POLL_MAX_MS = 300_000;
 const STATE_MODE = 0o600;
 const UPLOAD_RETRY_DELAY_MS = 5_000;
 const HTTP_FORBIDDEN = 403;
-const PRIVATE_NAMES = ["QUOTE_SIGNING_PRIVATE_KEY", "SESSION_SECRET", "OWNER_TOKEN_HASH"];
+const PRIVATE_NAMES = ["QUOTE_SIGNING_PRIVATE_KEY", "SESSION_SECRET", "OWNER_TOKEN_HASH", ...PRIVATE_OPTIONAL_SECRET_NAMES];
 const CLOCK_SKEW_MS = 5_000;
 const BOOT_OK = "[INFO] boot";
 const NOT_LAUNCHED = "[WARN] boot";

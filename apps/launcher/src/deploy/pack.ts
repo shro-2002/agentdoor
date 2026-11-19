@@ -121,11 +121,15 @@ export function assertAllowed(entries: string[]): void {
   if (bad.length > 0) throw new DeployError("ZIP_NOT_ALLOWED", `zip contains non-allow-listed files: ${bad.join(", ")}`);
 }
 
+/** The shape of an Anthropic API key. Caught even when the value is not on the forbidden list. */
+const ANTHROPIC_KEY_SHAPE = new RegExp(["sk", "ant", "[A-Za-z0-9_-]{16,}"].join("-"));
+
 function assertNoSecrets(stage: string, files: string[], values: string[]): void {
   const needles = values.filter((v) => v.length >= 8);
   for (const f of files) {
     const body = readFileSync(join(stage, f), "utf8");
     if (needles.some((n) => body.includes(n))) throw new DeployError("ZIP_NOT_ALLOWED", `a secret value was found in ${f}`);
+    if (ANTHROPIC_KEY_SHAPE.test(body)) throw new DeployError("ZIP_NOT_ALLOWED", `a model API key was found in ${f}`);
   }
 }
 

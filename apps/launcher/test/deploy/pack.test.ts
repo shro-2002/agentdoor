@@ -24,7 +24,7 @@ describe("pack", () => {
   it("builds the deployable artifact: generated manifest, npmrc, lockfile, bundle, dist", async () => {
     const res = await pack(options());
     const photos = ["brownies", "chocolate-cake", "cookie-box", "eggless-vanilla-cake", "hero-chocolate-cake", "kitchen-flour-hands", "kitchen-sifting-flour", "occasion-anniversary", "occasion-birthday", "occasion-gifting"];
-    const styles = ["agentdoor-launch", "agentdoor-try", "agentdoor", "bakery", "shop", "tokens", "ui"];
+    const styles = ["agentdoor-try", "agentdoor", "bakery", "shop", "tokens", "ui", "workspace", "workspace-preview"];
     expect(res.entries.sort()).toEqual(
       [
         ".npmrc",
@@ -36,6 +36,7 @@ describe("pack", () => {
         "public/favicon.svg",
         "public/photos/CREDITS.md",
         "public/shop.js",
+        "public/workspace.js",
         ...photos.map((f) => `public/photos/${f}.jpg`),
         ...styles.map((f) => `public/${f}.css`),
       ].sort(),
@@ -102,6 +103,12 @@ describe("pack", () => {
     for (const bad of [".env", ".agentdoor/secrets/publish.json", "secrets/x.key", "node_modules/a.js", "bundle/other.json"]) {
       expect(() => assertAllowed(["package.json", bad]), bad).toThrowError(/non-allow-listed/);
     }
+  });
+
+  it("refuses a file that holds anything shaped like a model API key, even when it is not on the list", async () => {
+    const key = ["sk", "ant", "api03", "A1b2C3d4E5f6G7h8I9j0"].join("-");
+    const leaky = options({ lockfile: async (dir) => writeFileSync(join(dir, "package-lock.json"), `{"note":"${key}"}`) });
+    await expect(pack(leaky)).rejects.toMatchObject({ code: "ZIP_NOT_ALLOWED", message: expect.stringContaining("model API key") });
   });
 
   it("refuses to pack a secret value found in a packed file", async () => {

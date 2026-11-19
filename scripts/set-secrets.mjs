@@ -14,6 +14,19 @@ const STATE_DIR = ".agentdoor";
 const VARIANTS = ["PREVIEW", "PUBLISH"];
 const SECRET_NAME_RE = /^[A-Za-z][A-Za-z0-9/_+=.@-]*$/;
 const MAX_OPS = 50;
+// Mirrors ALLOWED_SECRET_NAMES in apps/launcher/src/deploy/secrets.ts (a test keeps the two equal).
+const ALLOWED_NAMES = [
+  "QUOTE_SIGNING_PRIVATE_KEY",
+  "QUOTE_SIGNING_PUBLIC_KEY",
+  "SESSION_SECRET",
+  "OWNER_TOKEN_HASH",
+  "CONTACT_FORM_RECIPIENT_EMAIL",
+  "PUBLIC_BASE_URL",
+  "PLATFORM_BASE_URL",
+  "ANTHROPIC_API_KEY",
+  "WORKSPACE_ACCESS_CODE",
+  "WORKSPACE_BUDGET_USD",
+];
 const MAX_VALUE_BYTES = 8 * 1024;
 const FILE_MODE = 0o600;
 const PATCH_CONTENT_TYPE = "Content-Type: application/json-patch+json";
@@ -32,7 +45,7 @@ function buildPatch(secrets) {
     throw new Error(`need 1..${MAX_OPS} secrets`);
   return names.map((name) => {
     const value = secrets[name];
-    if (!SECRET_NAME_RE.test(name))
+    if (!SECRET_NAME_RE.test(name) || !ALLOWED_NAMES.includes(name))
       throw new Error(`invalid secret name: ${name}`);
     if (
       typeof value !== "string" ||

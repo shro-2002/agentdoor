@@ -82,10 +82,10 @@ describe("placeOrder", () => {
 
 describe("transitionOrder", () => {
   it("I-ORD-5 decline releases capacity; double decline and confirm-after-decline → 409 code", async () => {
-    const q = quote({ capacityUnits: 3, isRush: true });
+    const q = quote({ capacityUnits: 2, isRush: true });
     const placed = await place({ quote: q });
     if (!placed.ok) throw new Error("setup");
-    expect(await ledger(pool)).toEqual({ reserved: 3, rush: 3 });
+    expect(await ledger(pool)).toEqual({ reserved: 2, rush: 2 });
     const d = await transitionOrder(pool, placed.orderId, "decline", { nowMs: 1 });
     expect(d).toMatchObject({ ok: true, to: "DECLINED" });
     expect(await ledger(pool)).toEqual({ reserved: 0, rush: 0 });

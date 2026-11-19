@@ -149,13 +149,11 @@ async function attemptPlace(
       orderId,
       new Date(i.nowMs),
     ]);
-    // GREATEST(rushCap, r): the engine already refuses one order larger than the rush cap, and
-    // test I-ORD-5 books a 3-unit rush order on a cap of 2. Day totals still stop at the cap.
     const [res] = await conn.query<ResultSetHeader>(
       `UPDATE capacity_ledger
           SET reserved_units = reserved_units + ?, rush_units = rush_units + ?
-        WHERE fulfil_date = ? AND reserved_units + ? <= ? AND rush_units + ? <= GREATEST(?, ?)`,
-      [units, rushUnits, i.fulfilDate, units, i.capacity.unitsCap, rushUnits, i.capacity.rushCap, rushUnits],
+        WHERE fulfil_date = ? AND reserved_units + ? <= ? AND rush_units + ? <= ?`,
+      [units, rushUnits, i.fulfilDate, units, i.capacity.unitsCap, rushUnits, i.capacity.rushCap],
     );
     if (res.affectedRows === 0)
       return { commit: false, value: { kind: "REFUSED", code: await refusalReason(conn, i, units) } };

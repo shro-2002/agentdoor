@@ -16,3 +16,4 @@ export * from "./rehearsal/requiredPaths.js";
 export * from "./rehearsal/lint.js";
 export * from "./rehearsal/probes.js";
 export * from "./rehearsal/classify.js";
+export * from "./rehearsal/categories.js";

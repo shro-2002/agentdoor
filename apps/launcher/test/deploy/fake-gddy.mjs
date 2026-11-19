@@ -24,7 +24,7 @@ const fail = (code) => {
 };
 
 state.calls.push(argv);
-const key = argv[0] === "operation" ? "operation get" : argv.slice(0, 3).join(" ");
+const key = argv.slice(0, 3).join(" ");
 const failKey = state.failOnce.find((k) => argv.join(" ").startsWith(k));
 if (failKey) {
   state.failOnce = state.failOnce.filter((k) => k !== failKey);
@@ -51,7 +51,7 @@ const handlers = {
     save();
     out({ operationId: "op-create" });
   },
-  "operation get": () => out(argv[2] === "op-create" ? { status: "COMPLETED", app: { id: "APP-NEW" } } : { status: "COMPLETED" }),
+  "hosting operation get": () => out(flag("--operation-id") === "op-create" ? { status: "COMPLETED", app: { id: "APP-NEW" } } : { status: "COMPLETED" }),
   "hosting app get": () => {
     if (!state.apps.some((a) => a.id === flag("--app-id"))) fail("NOT_FOUND");
     out({ urls: { publish: "fake-app.airoapp.ai" } });
@@ -63,7 +63,10 @@ const handlers = {
     save();
     out({ importId });
   },
-  "hosting source import": () => (argv[3] === "list" ? out({ imports: state.imports }) : out({ status: "COMPLETED" })),
+  "hosting source status": () => {
+    if (!flag("--app-id") || !state.imports.some((i) => i.importId === flag("--import-id"))) fail("NOT_FOUND");
+    out({ status: "COMPLETED" });
+  },
   "hosting secret list": () => out({ secrets: (state.secrets[flag("--variant")] ?? []).map((name) => ({ name })) }),
   "hosting app restart": () => {
     state.restarts.push(flag("--variant"));
@@ -84,5 +87,9 @@ const handlers = {
 
 const handler = handlers[key];
 save();
-if (!handler) fail("UNKNOWN_COMMAND");
+if (!handler) {
+  // Like the real CLI: unknown command, error on stderr, non-zero exit.
+  console.error(`error: unknown command "${argv.slice(0, 3).join(" ")}"`);
+  process.exit(1);
+}
 handler();

@@ -71,3 +71,35 @@ describe("scripts/deploy.ts live guard", () => {
     expect(run([], {}).stderr).toMatch(/Refusing to deploy/);
   });
 });
+
+describe("command table uses only verified real gddy shapes", () => {
+  // First three words plus the flag names, in order. Anything else is not a verified real gddy command.
+  const ALLOWED = new Set([
+    "hosting app list --app-type",
+    "hosting app create --app-type --name",
+    "hosting app get --app-id",
+    "hosting app restart --app-id --variant",
+    "hosting operation get --operation-id",
+    "hosting source upload --app-id --file",
+    "hosting source status --app-id --import-id",
+    "hosting secret list --app-id --variant",
+    "hosting deployment publish --app-id",
+    "hosting domain list --app-id",
+    "hosting log list --app-id --variant",
+    "hosting subscription get --app-id",
+  ]);
+  const shape = (argv: string[]) => [...argv.slice(0, 3), ...argv.slice(3).filter((a) => a.startsWith("--"))].join(" ");
+
+  it("every argv matches the allow-list and uses the real operation/import-status argv", async () => {
+    const { cmd } = await import("../../src/deploy/commands.js");
+    const all = [
+      cmd.listApps(), cmd.createApp(), cmd.getApp("a"), cmd.getOperation("o"), cmd.getSubscription("a"),
+      cmd.upload("a", "f"), cmd.getImport("a", "i"), cmd.listSecrets("a", "PREVIEW"), cmd.restart("a", "PREVIEW"),
+      cmd.logs("a", "PREVIEW"), cmd.publish("a"), cmd.listDomains("a"),
+    ];
+    expect(Object.keys(cmd)).toHaveLength(all.length);
+    for (const c of all) expect(ALLOWED.has(shape(c.argv)), c.argv.join(" ")).toBe(true);
+    expect(cmd.getOperation("o").argv).toEqual(["hosting", "operation", "get", "--operation-id", "o"]);
+    expect(cmd.getImport("a", "i").argv).toEqual(["hosting", "source", "status", "--app-id", "a", "--import-id", "i"]);
+  });
+});

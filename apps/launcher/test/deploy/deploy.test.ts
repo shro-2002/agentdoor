@@ -36,7 +36,7 @@ describe("I-DEP-1 happy path with a fake gddy", () => {
     const res = await deploy(opts());
     expect(res.policyHash).toBe(env.hash);
     expect(res.baseUrl).toBe("https://shop.test");
-    const order = calls(env).filter((c) => !c.startsWith("hosting log") && !c.startsWith("operation") && !c.startsWith("hosting source import"));
+    const order = calls(env).filter((c) => !c.startsWith("hosting log") && !c.startsWith("hosting operation") && !c.startsWith("hosting source status"));
     const want = [
       "hosting app list",
       "hosting app create",
@@ -50,7 +50,6 @@ describe("I-DEP-1 happy path with a fake gddy", () => {
       "hosting deployment publish",
       "hosting domain list",
     ];
-    // upload is preceded by an import-list check, which the filter above removed
     expect(order).toEqual(want);
     expect(env.readState().created).toBe(1);
     expect(JSON.parse(readFileSync(join(env.root, ".agentdoor/deploy.json"), "utf8"))).toEqual({ appId: "APP-NEW", name: "agentdoor-shop" });
@@ -86,22 +85,22 @@ describe("I-DEP-2 resume after a failure", () => {
     const res = await deploy(opts());
     const second = env.readState().calls.slice(before).map((c) => c.slice(0, 3).join(" "));
     expect(second).not.toContain("hosting app create");
-    expect(second).not.toContain("hosting source upload");
+    expect(second).toContain("hosting source upload"); // no import list exists: a rerun uploads again
     expect(second).not.toContain("api call -X");
     expect(second).toContain("hosting deployment publish");
-    expect(res.steps.upload).toBe("skipped");
+    expect(res.steps.upload).toBe("done");
     expect(res.steps["secrets-preview"]).toBe("skipped");
     expect(res.steps["secrets-publish"]).toBe("skipped");
     expect(res.steps.app).toBe("skipped");
     expect(env.readState().created).toBe(1);
   });
 
-  it("a fully deployed shop is a no-op rerun (no upload, publish or secrets)", async () => {
+  it("a fully deployed shop is a no-op rerun (no publish, secrets or create)", async () => {
     await deploy(opts());
     const before = env.readState().calls.length;
     const res = await deploy(opts());
     const second = env.readState().calls.slice(before).map((c) => c.slice(0, 3).join(" "));
-    expect(second.filter((c) => /upload|publish|api call|create|restart/.test(c))).toEqual([]);
+    expect(second.filter((c) => /publish|api call|create/.test(c))).toEqual([]);
     expect(res.steps.publish).toBe("skipped");
   });
 

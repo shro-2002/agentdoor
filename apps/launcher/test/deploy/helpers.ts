@@ -112,4 +112,4 @@ export function fakeFetch(env: Env): FetchFn {
   };
 }
 
-export const calls = (env: Env): string[] => env.readState().calls.map((c) => c.slice(0, c[0] === "operation" ? 2 : 3).join(" "));
+export const calls = (env: Env): string[] => env.readState().calls.map((c) => c.slice(0, 3).join(" "));

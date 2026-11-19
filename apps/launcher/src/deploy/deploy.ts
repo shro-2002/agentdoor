@@ -213,15 +213,8 @@ class Deployer {
 
   // --- upload -------------------------------------------------------------------------------------
 
-  /** Returns true when an upload happened in this run. */
+  /** Always uploads: gddy has no list of imports and only the appId is persisted. Returns true. */
   private async upload(packed: PackResult): Promise<boolean> {
-    const fileName = `shop-${packed.artifactId}.zip`;
-    const imports = arrayAt(await this.call(cmd.listImports(this.appId)), ["imports", "items"]);
-    const same = imports.find((i) => i.fileName === fileName && DONE.has(String(i.status).toUpperCase()));
-    if (same) {
-      this.mark("upload", "skipped");
-      return false;
-    }
     const started = dataOf(await this.call(cmd.upload(this.appId, packed.zipPath)));
     const importId = str(started.importId);
     if (!importId) throw new DeployError("GDDY_BAD_RESPONSE", "upload returned no import id");

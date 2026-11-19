@@ -813,3 +813,64 @@ a:hover {
   font-weight: 600;
   margin: var(--space-2) 0;
 }
+
+/* ---------- Gap card, read-only decision ---------- */
+.gap__decision {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--leaf-bg);
+  color: var(--leaf);
+  border-radius: var(--radius-s);
+  font-weight: 600;
+}
+
+/* ---------- ProvenanceBadge: icon + words, never colour alone ---------- */
+.prov {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  font-size: var(--step--1);
+}
+.prov__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 12px 3px 8px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  font: 700 0.75rem / 1.5 var(--font-body);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.prov__tag .icon {
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
+}
+.prov__note {
+  color: var(--ink-2);
+  flex: 1 1 16em;
+}
+.prov--claude .prov__tag {
+  color: var(--saffron);
+  background: var(--card);
+}
+.prov--live .prov__tag {
+  color: var(--leaf);
+  background: var(--leaf-bg);
+}
+.prov--deploy .prov__tag {
+  color: var(--ink);
+  background: var(--card);
+}
+.prov--live .icon--pulse circle:first-child {
+  animation: prov-pulse 1.8s var(--ease) infinite;
+}
+@keyframes prov-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}

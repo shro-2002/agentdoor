@@ -23,5 +23,6 @@ export {
   type StepTimelineProps,
   type TimelineStep,
 } from "./components.js";
+export { PROVENANCE_ORDER, provenanceBadge, type Provenance, type ProvenanceBadgeProps } from "./provenance.js";
 export { GROUP_ORDER, receiptGroups, type CardLike, type GroupId, type ReceiptText, type RunLike } from "./receipt.js";
 

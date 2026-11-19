@@ -67,6 +67,8 @@ export interface RuleCardProps {
   state: RuleState;
   edit?: { label: string; unit: string | null; value: string; min: number; max: number } | null;
   labels?: Partial<RuleLabels>;
+  /** Public pages (launch report, /try): same card, no buttons. */
+  readOnly?: boolean;
 }
 
 function ruleChip(state: RuleState, l: RuleLabels): SafeHtml {
@@ -107,13 +109,13 @@ export function ruleCard(p: RuleCardProps): SafeHtml {
     </div>
     <div class="rule__side">
       ${ruleChip(p.state, l)}
-      <div class="rule__actions">
+      ${p.readOnly ? "" : html`<div class="rule__actions">
         ${approved ? "" : html`<button type="button" class="btn btn--primary" data-action="approve" data-path="${p.path}" aria-label="${l.approve}: ${p.title}">${l.approve}</button>`}
         ${p.quote ? html`<button type="button" class="btn btn--ghost" data-action="show-source" data-path="${p.path}" aria-label="${l.showSource}: ${p.title}">${l.showSource}</button>` : ""}
         ${p.edit ? html`<button type="button" class="btn btn--secondary" data-action="edit" data-path="${p.path}" aria-label="${l.edit}: ${p.title}">${icon("pencil")}${l.edit}</button>` : ""}
-      </div>
+      </div>`}
     </div>
-    ${ruleEditForm(p, id, l)}
+    ${p.readOnly ? "" : ruleEditForm(p, id, l)}
   </article>`;
 }
 
@@ -190,6 +192,8 @@ export interface GapCardProps {
   example: string | null;
   fixes: { choice: string; label: string; needsValue: boolean }[];
   labels?: { apply?: string; example?: string; critical?: string; warning?: string; choose?: string; number?: string; pick?: string };
+  /** Public pages: no fix form, only the owner's recorded decision (e.g. "Fixed in version 3"). */
+  readOnly?: { decision: string };
 }
 
 export function gapCard(p: GapCardProps): SafeHtml {
@@ -203,7 +207,7 @@ export function gapCard(p: GapCardProps): SafeHtml {
     </header>
     <p class="gap__body">${p.body}</p>
     ${p.example ? html`<blockquote class="gap__example"><span class="gap__example-label">${l.example ?? "Example"}</span> <q>${p.example}</q></blockquote>` : ""}
-    <form class="gap__form" data-gap-id="${p.gapId}">
+    ${p.readOnly ? html`<p class="gap__decision">${icon("check")}<span>${p.readOnly.decision}</span></p>` : html`<form class="gap__form" data-gap-id="${p.gapId}">
       <fieldset>
         <legend>${l.choose ?? "Choose a fix"}</legend>
         <div class="choices">
@@ -218,7 +222,7 @@ export function gapCard(p: GapCardProps): SafeHtml {
       </fieldset>
       <p class="gap__error" role="alert" hidden></p>
       <button type="submit" class="btn btn--primary">${icon("check")}${l.apply ?? "Apply fix"}</button>
-    </form>
+    </form>`}
   </article>`;
 }
 

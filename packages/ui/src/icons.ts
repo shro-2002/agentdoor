@@ -17,7 +17,10 @@ const PATHS = {
   pencil: '<path d="M4 20l1-4L16.5 4.5a2 2 0 0 1 3 3L8 19z"/>',
   copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
   dot: '<circle cx="12" cy="12" r="4"/>',
-  spinner: '<path d="M12 3a9 9 0 1 0 9 9"/>',
+  quote: '<path d="M5 18v-5.5C5 8.5 7 6.5 10 6"/><path d="M5 12.5h4.5V18H5z"/><path d="M14 18v-5.5c0-4 2-6 5-6.5"/><path d="M14 12.5h4.5V18H14z"/>',
+  server: '<rect x="3.5" y="4" width="17" height="6.5" rx="1.5"/><rect x="3.5" y="13.5" width="17" height="6.5" rx="1.5"/><path d="M7 7.25h.01M7 16.75h.01"/>',
+  pulse: '<circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="12" cy="12" r="7.5"/>',
+  spinner:'<path d="M12 3a9 9 0 1 0 9 9"/>',
 } as const;
 
 export type IconName = keyof typeof PATHS;

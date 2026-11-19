@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { builtinModules } from "node:module";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -36,6 +37,19 @@ describe("pack", () => {
     const js = readFileSync(join(env.root, "out/shop/dist/index.js"), "utf8");
     expect(js).not.toMatch(/from ["']@agentdoor\/core["']/);
     expect(js).toMatch(/from ["']express["']/);
+  });
+
+  it("every package the built shop imports is a pinned runtime dependency in the generated manifest (C2)", async () => {
+    await pack(options());
+    const js = readFileSync(join(env.root, "out/shop/dist/index.js"), "utf8");
+    const specifiers = [...js.matchAll(/(?:\bfrom\s+|\bimport\s*\(?\s*)["']([^"']+)["']/g)].map((m) => m[1]!);
+    const bare = specifiers.filter((s) => !s.startsWith(".") && !s.startsWith("/") && !s.startsWith("node:") && !builtinModules.includes(s));
+    const packages = new Set(bare.map((s) => (s.startsWith("@") ? s.split("/").slice(0, 2).join("/") : s.split("/")[0]!)));
+    expect(packages.size).toBeGreaterThan(0);
+    const pkg = JSON.parse(readFileSync(join(env.root, "out/shop/package.json"), "utf8")) as { dependencies: Record<string, string>; devDependencies?: unknown };
+    for (const name of packages) expect(pkg.dependencies, name).toHaveProperty([name]);
+    expect(pkg.devDependencies).toBeUndefined();
+    expect(packages.has("@agentdoor/core")).toBe(false);
   });
 
   it("includes try/session.json when present, and is a real zip with only allow-listed entries", async () => {

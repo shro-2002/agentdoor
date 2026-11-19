@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluate } from "../src/index.js";
+import { QuoteRequestSchema, evaluate } from "../src/index.js";
 import {
   FAR_DATE,
   NOW,
@@ -9,6 +9,19 @@ import {
   nowFor,
   pickupReq,
 } from "./helpers.js";
+
+describe("SEC-7 the request schema bounds the engine's work", () => {
+  const line = { itemId: "choco-cake", qty: 1, optionIds: [] as string[] };
+  const base = { fulfilment: { kind: "pickup" as const }, date: FAR_DATE };
+
+  it("accepts 20 lines and refuses 21; refuses oversize qty, option lists and notes", () => {
+    expect(QuoteRequestSchema.safeParse({ ...base, lines: Array.from({ length: 20 }, () => line) }).success).toBe(true);
+    expect(QuoteRequestSchema.safeParse({ ...base, lines: Array.from({ length: 21 }, () => line) }).success).toBe(false);
+    expect(QuoteRequestSchema.safeParse({ ...base, lines: [{ ...line, qty: 1001 }] }).success).toBe(false);
+    expect(QuoteRequestSchema.safeParse({ ...base, lines: [{ ...line, optionIds: Array.from({ length: 21 }, (_, i) => `o${i}`) }] }).success).toBe(false);
+    expect(QuoteRequestSchema.safeParse({ ...base, lines: [line], notes: "x".repeat(100_000) }).success).toBe(false);
+  });
+});
 
 describe("U-ENG-1 exact arithmetic", () => {
   it("prices lines, options, delivery fee and total", () => {

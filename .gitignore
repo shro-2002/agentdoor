@@ -11,6 +11,7 @@ private/
 node_modules/
 out/
 dist/
+*.tsbuildinfo
 coverage/
 playwright-report/
 test-results/

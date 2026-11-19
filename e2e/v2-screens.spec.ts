@@ -41,9 +41,6 @@ for (const { w, h } of SIZES) {
     await expect(page.getByRole("heading", { level: 1, name: "Your quote" })).toBeVisible();
     await shot(page, "order", w);
 
-    await page.goto(`${SHOP()}/launch`);
-    await shot(page, "launch", w);
-
     await page.goto(`${SHOP()}/try`);
     await shot(page, "try", w);
   });

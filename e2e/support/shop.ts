@@ -7,6 +7,7 @@ import type { ShopConfig } from "../../apps/shop/src/config.js";
 import { loadLaunchState } from "../../apps/shop/src/db/launch-state.js";
 import { runMigrations } from "../../apps/shop/src/db/migrations.js";
 import { createPool } from "../../apps/shop/src/db/pool.js";
+import type { WorkspaceConfig } from "../../apps/shop/src/workspace/config.js";
 import type { DemoWorld } from "./demo-world.js";
 
 /** Local docker-compose MySQL (public, throwaway values; the same ones the shop's integration tests use). */
@@ -19,7 +20,7 @@ export const dbConfig = {
 };
 
 export const OWNER_TOKEN = "e2e-owner-token-not-a-secret";
-const TABLES = ["audit_events", "orders", "quote_redemptions", "capacity_ledger", "contact_messages"];
+const TABLES = ["audit_events", "orders", "quote_redemptions", "capacity_ledger", "contact_messages", "ws_jobs", "ws_drafts", "ws_hits", "ws_budget", "ws_publish"];
 
 export interface RunningShop {
   baseUrl: string;
@@ -29,7 +30,7 @@ export interface RunningShop {
 }
 
 /** An in-process shop on a free local port, with a clean database and the world's signed bundle. */
-export async function startShop(world: DemoWorld, opts: { bundleDir?: string } = {}): Promise<RunningShop> {
+export async function startShop(world: DemoWorld, opts: { bundleDir?: string; workspace?: WorkspaceConfig } = {}): Promise<RunningShop> {
   const pool = createPool(dbConfig);
   await runMigrations(pool);
   for (const t of TABLES) await pool.query(`DELETE FROM ${t}`);
@@ -59,6 +60,7 @@ export async function startShop(world: DemoWorld, opts: { bundleDir?: string } =
     pool,
     launch,
     log: () => undefined,
+    workspace: opts.workspace,
     sendEmail: async (m) => {
       emails.push({ subject: m.subject, text: m.text });
       return { messageId: "e2e" };

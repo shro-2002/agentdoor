@@ -65,9 +65,10 @@ for (const w of WIDTHS) {
       await clean(page, `S5 ${w}`);
     });
 
-    test("AgentDoor landing page", async ({ page }) => {
+    test("Workspace start page (closed on this shop)", async ({ page }) => {
       await page.goto(`${SHOP()}/launch`);
-      await clean(page, `launch ${w}`);
+      await expect(page.getByRole("heading", { level: 1, name: "Workspace is closed" })).toBeVisible();
+      expect(await seriousViolations(page), `launch ${w}`).toEqual([]);
     });
 
     test("S7 owner login and dashboard", async ({ page }) => {

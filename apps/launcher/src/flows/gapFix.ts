@@ -228,6 +228,22 @@ function dismissProvenance(prev: RuleProvenance | undefined, gap: Gap, lang: Lan
   };
 }
 
+/**
+ * The policy as it would be after the owner's chosen fix (a pure function: the caller validates and
+ * stores it). A scenario "that is fine" answer only records the owner's acceptance in provenance.
+ */
+export function patchedPolicy(policy: BusinessPolicy, gap: Gap & { example?: string | null }, choice: string, value: number | undefined, lang: Lang): BusinessPolicy {
+  const option = fixOptions(gap, policy).find((o) => o.choice === choice);
+  if (!option) throw validationFailed("Unknown fix choice for this gap.");
+  const patches = chosenPatches(option, value);
+  const next = structuredClone(policy);
+  if (choice === DISMISS) {
+    const path = gap.paths.find((p) => p in next.provenance);
+    if (path) next.provenance[path] = dismissProvenance(next.provenance[path], gap, lang, gap.example ?? gap.id);
+  } else applyPatches(next, patches, gap, option, lang);
+  return next;
+}
+
 function appendLog(deps: Deps, sessionId: string, entry: FixLogEntry): void {
   const log = deps.store.readExtra<FixLogEntry[]>(sessionId, "fixes") ?? [];
   deps.store.writeExtra(sessionId, "fixes", [...log, entry]);
@@ -242,15 +258,7 @@ export function applyGapFix(deps: Deps, sessionId: string, gapId: string, choice
   const gap = run?.gaps.find((g) => g.id === gapId);
   if (!run || !gap) throw gapNotFound(run ? "That gap is not in the latest rehearsal." : "Run the rehearsal first.");
   const { session, version, policy } = latestPolicy(deps, sessionId);
-  const option = fixOptions(gap, policy).find((o) => o.choice === choice);
-  if (!option) throw validationFailed("Unknown fix choice for this gap.");
-  const patches = chosenPatches(option, value);
-
-  const next = structuredClone(policy);
-  if (choice === DISMISS) {
-    const path = gap.paths.find((p) => p in next.provenance);
-    if (path) next.provenance[path] = dismissProvenance(next.provenance[path], gap, session.language, gap.example ?? gap.id);
-  } else applyPatches(next, patches, gap, option, session.language);
+  const next = patchedPolicy(policy, gap, choice, value, session.language);
 
   const changed = JSON.stringify(next) !== JSON.stringify(policy);
   const toVersion = changed ? commitVersion(deps, sessionId, next, { kind: "gap_fix", gapId, choice, fromVersion: version }) : version;

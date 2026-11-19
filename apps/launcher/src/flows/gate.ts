@@ -82,7 +82,7 @@ const check = (id: GateCheckId, label: string, problems: string[], okDetail = "o
   detail: problems.length === 0 ? okDetail : problems.join("; "),
 });
 
-function runChecks(policy: BusinessPolicy, run: RunResult | null, stale: boolean): GateCheck[] {
+export function runChecks(policy: BusinessPolicy, run: RunResult | null, stale: boolean): GateCheck[] {
   const valid = BusinessPolicySchema.safeParse(policy);
   const unapproved = requiredPaths(policy).filter((p) => policy.provenance[p]?.status !== "approved");
   return [

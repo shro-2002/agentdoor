@@ -106,7 +106,7 @@ export function runScenarios(
 }
 
 /** What the scenarios are written against: the vocabulary requests must use, not the rule values. */
-function vocabularyHash(policy: BusinessPolicy): string {
+export function vocabularyHash(policy: BusinessPolicy): string {
   const vocab = {
     items: policy.catalog.map((c) => [c.id, ...c.options.map((o) => o.id)]),
     areas: policy.fulfilment.delivery.areas.map((a) => [a.name, ...a.aliases]),
@@ -162,7 +162,7 @@ function nameablePaths(policy: BusinessPolicy): string[] {
   return [...requiredPaths(policy), ...rush, ...extra];
 }
 
-export function buildScenariosUser(session: Session, policy: BusinessPolicy): string {
+export function buildScenariosUser(session: Pick<Session, "turns">, policy: BusinessPolicy): string {
   const words = session.turns.join("\n\n").slice(0, MAX_OWNER_WORDS_CHARS);
   return [
     "Policy summary (JSON):",

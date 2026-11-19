@@ -8,6 +8,7 @@ import {
   policyHash,
   runProbes,
   sha256Hex,
+  type BusinessPolicy,
   type EngineOutcome,
   type Gap,
   type ProbeResult,
@@ -16,7 +17,7 @@ import { now, todayIst } from "../claude/clock.js";
 import { HTTP_NOT_FOUND, LauncherError } from "../claude/errors.js";
 import type { Deps } from "./compile.js";
 import { latestPolicy } from "./policyEdit.js";
-import { loadScenarios, resolveScenarios, runScenarios } from "./scenarios.js";
+import { loadScenarios, resolveScenarios, runScenarios, type ScenarioWire } from "./scenarios.js";
 
 export interface RunGap extends Gap {
   /** The owner accepted this scenario outcome ("Actually that's fine"). */
@@ -138,6 +139,89 @@ function resultsHashOf(probes: ProbeResult[], scenarios: RunResult["scenarios"],
   );
 }
 
+/** The deterministic engine probes for one policy: pure, free, and the same on every machine. */
+export function runProbeChecks(policy: BusinessPolicy, hash: string, nowMs: number, evalFn: Evaluator = evaluate): ProbeResult[] {
+  const probes = generateProbes(policy, nowMs, Number.parseInt(hash.slice(0, SEED_HEX_CHARS), HEX));
+  return runProbes(policy, probes, evalFn);
+}
+
+export interface JudgeInput {
+  policy: BusinessPolicy;
+  /** The owner's words, for the linter's evidence checks. */
+  transcript: string;
+  probeResults: ProbeResult[];
+  scenarios: ScenarioWire[];
+  /** IST date the scenarios' `daysAhead` counts from. */
+  today: string;
+  nowMs: number;
+  dismissed: Set<string>;
+  evalFn?: Evaluator;
+}
+
+/** Scenarios through the engine, then every finding (lint, probes, scenarios) as one de-duplicated gap list. */
+export function judgeScenarios(i: JudgeInput): { outcomes: ReturnType<typeof runScenarios>; dropped: number; gaps: RunGap[] } {
+  const { valid, dropped } = resolveScenarios(i.scenarios, i.today);
+  const outcomes = runScenarios(i.policy, valid, i.nowMs, i.evalFn ?? evaluate);
+  const examples = new Map<string, string>();
+  for (const o of outcomes) if (o.gap) examples.set(o.gap.id, o.customerMessage);
+  for (const r of i.probeResults.filter((p) => p.status !== "PASS"))
+    examples.set(`${r.status === "FAIL" ? "ENGINE_PROBE_FAILED" : "PROBE_NEEDS_OWNER"}:${r.probeId}`, r.detail);
+  const gaps = toRunGaps(
+    [
+      ...lintPolicy(i.policy, { transcript: i.transcript }),
+      ...i.probeResults.flatMap((r) => classifyProbeResult(r) ?? []),
+      ...outcomes.flatMap((o) => o.gap ?? []),
+    ],
+    examples,
+    i.dismissed,
+  );
+  return { outcomes, dropped, gaps };
+}
+
+export interface AssembleInput {
+  runId: string;
+  seq: number;
+  sessionId: string;
+  version: number;
+  hash: string;
+  ranAt: string;
+  probes: ProbeResult[];
+  outcomes: ReturnType<typeof runScenarios>;
+  dropped: number;
+  gaps: RunGap[];
+  source: RunResult["scenarioSource"];
+}
+
+/** Summarises one judged run into the stored result shape (the gate and the launch record read it). */
+export function assembleRun(a: AssembleInput): RunResult {
+  const scenarios = a.outcomes.map(({ gap, ...o }) => ({ ...o, matched: gap === null }));
+  const probesPassed = count(a.probes, (p) => p.status === "PASS");
+  const open = a.gaps.filter((g) => !g.dismissed);
+  return {
+    runId: a.runId,
+    seq: a.seq,
+    sessionId: a.sessionId,
+    policyVersion: a.version,
+    policyHash: a.hash,
+    ranAt: a.ranAt,
+    probes: a.probes,
+    scenarios,
+    droppedScenarios: a.dropped,
+    gaps: a.gaps,
+    summary: {
+      probes: a.probes.length,
+      probesPassed,
+      probesFailed: count(a.probes, (p) => p.status === "FAIL"),
+      scenarios: scenarios.length,
+      passed: probesPassed + count(scenarios, (s) => s.matched),
+      criticalOpen: count(open, (g) => g.severity === "critical"),
+      warningsOpen: count(open, (g) => g.severity === "warning"),
+    },
+    resultsHash: resultsHashOf(a.probes, scenarios, a.gaps),
+    scenarioSource: a.source,
+  };
+}
+
 export class Rehearsals {
   private readonly live = new Map<string, RunStatus>();
   private readonly pending = new Map<string, Promise<void>>();
@@ -195,60 +279,40 @@ export class Rehearsals {
     const nowMs = now().getTime();
     const evalFn = this.opts.evaluate ?? evaluate;
 
-    const probes = generateProbes(policy, nowMs, Number.parseInt(hash.slice(0, SEED_HEX_CHARS), HEX));
-    status.progress = { phase: "probes", done: 0, total: probes.length };
-    const probeResults = runProbes(policy, probes, evalFn);
+    const probeResults = runProbeChecks(policy, hash, nowMs, evalFn);
+    status.progress = { phase: "probes", done: probeResults.length, total: probeResults.length };
     status.progress = { phase: "scenarios", done: 0, total: 0 };
 
     const set = await loadScenarios(deps, session, policy);
-    const { valid, dropped } = resolveScenarios(set.scenarios, todayIst(now()));
-    const outcomes = runScenarios(policy, valid, nowMs, evalFn);
+    const { outcomes, dropped, gaps } = judgeScenarios({
+      policy,
+      transcript: session.turns.join("\n"),
+      probeResults,
+      scenarios: set.scenarios,
+      today: todayIst(now()),
+      nowMs,
+      dismissed: new Set(readDismissals(deps, session.id).map((d) => d.gapId)),
+      evalFn,
+    });
     status.progress = { phase: "classifying", done: outcomes.length, total: outcomes.length };
-
-    const examples = new Map<string, string>();
-    for (const o of outcomes) if (o.gap) examples.set(o.gap.id, o.customerMessage);
-    for (const r of probeResults.filter((p) => p.status !== "PASS")) examples.set(`${r.status === "FAIL" ? "ENGINE_PROBE_FAILED" : "PROBE_NEEDS_OWNER"}:${r.probeId}`, r.detail);
-
-    const gaps = toRunGaps(
-      [
-        ...lintPolicy(policy, { transcript: session.turns.join("\n") }),
-        ...probeResults.flatMap((r) => classifyProbeResult(r) ?? []),
-        ...outcomes.flatMap((o) => o.gap ?? []),
-      ],
-      examples,
-      new Set(readDismissals(deps, session.id).map((d) => d.gapId)),
-    );
     return this.persist(status, { version, hash, probes: probeResults, outcomes, dropped, gaps, set });
   }
 
   private persist(status: RunStatus, judged: Judged): RunResult {
     const { version, hash, probes, outcomes, dropped, gaps, set } = judged;
-    const scenarios = outcomes.map(({ gap, ...o }) => ({ ...o, matched: gap === null }));
-    const probesPassed = count(probes, (p) => p.status === "PASS");
-    const open = gaps.filter((g) => !g.dismissed);
-    const result: RunResult = {
+    const result = assembleRun({
       runId: status.runId,
       seq: this.deps.store.listRuns(status.sessionId).length + 1,
       sessionId: status.sessionId,
-      policyVersion: version,
-      policyHash: hash,
+      version,
+      hash,
       ranAt: now().toISOString(),
       probes,
-      scenarios,
-      droppedScenarios: dropped,
+      outcomes,
+      dropped,
       gaps,
-      summary: {
-        probes: probes.length,
-        probesPassed,
-        probesFailed: count(probes, (p) => p.status === "FAIL"),
-        scenarios: scenarios.length,
-        passed: probesPassed + count(scenarios, (s) => s.matched),
-        criticalOpen: count(open, (g) => g.severity === "critical"),
-        warningsOpen: count(open, (g) => g.severity === "warning"),
-      },
-      resultsHash: resultsHashOf(probes, scenarios, gaps),
-      scenarioSource: { fromFixture: set.fromFixture, cached: set.cached, costUsd: set.costUsd, model: set.model },
-    };
+      source: { fromFixture: set.fromFixture, cached: set.cached, costUsd: set.costUsd, model: set.model },
+    });
     this.deps.store.writeRun(status.sessionId, result);
     return result;
   }

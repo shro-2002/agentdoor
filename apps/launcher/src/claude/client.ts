@@ -77,8 +77,18 @@ export interface CallResult<T> {
   latencyMs: number;
 }
 
+/**
+ * An async spend guard a host can supply instead of the local usage file: the deployed workspace keeps
+ * its budget in MySQL. `reserve` throws when the worst-case estimate would pass a cap, otherwise the
+ * caller settles the real cost afterwards (0 when the call failed before any usage was reported).
+ */
+export interface SpendGuard {
+  reserve(sessionId: string, estimateUsd: number): Promise<{ settle(actualUsd: number): Promise<void> }>;
+}
+
 export interface ClaudeClientOptions {
   mode?: LlmMode;
+  spendGuard?: SpendGuard;
   fixturesDir?: string;
   usagePath?: string;
   maxUsdPerSession?: number;
@@ -116,6 +126,7 @@ export class ClaudeClient {
   private readonly sdkFactory: () => AnthropicLike;
   private readonly warn: (m: string) => void;
   private readonly clock: () => Date;
+  private readonly spendGuard: SpendGuard | null;
   private sdk: AnthropicLike | null = null;
 
   constructor(opts: ClaudeClientOptions = {}) {
@@ -129,6 +140,7 @@ export class ClaudeClient {
     this.sdkFactory = opts.sdkFactory ?? defaultSdkFactory;
     this.warn = opts.warn ?? ((m) => console.warn(m));
     this.clock = opts.now ?? systemNow;
+    this.spendGuard = opts.spendGuard ?? null;
   }
 
   usageTotals(): { totalUsd: number; sessionUsd: (id: string) => number } {
@@ -201,9 +213,17 @@ export class ClaudeClient {
     const sessionId = c.sessionId ?? "default";
     return async (i: number, messages: Message[]): Promise<RecordedAttempt> => {
       const chars = c.system.length + JSON.stringify(schema).length + messages.reduce((n, m) => n + m.content.length, 0);
-      this.guard.assertCanSpend(sessionId, estimateUsd(c.model, chars, c.maxTokens));
+      const estimate = estimateUsd(c.model, chars, c.maxTokens);
+      const reservation = this.spendGuard ? await this.spendGuard.reserve(sessionId, estimate) : null;
+      if (!reservation) this.guard.assertCanSpend(sessionId, estimate);
       const startedAt = Date.now();
-      const res = await this.sdkInstance().beta.messages.create(buildParams(c, schema, messages));
+      let res: Awaited<ReturnType<AnthropicLike["beta"]["messages"]["create"]>>;
+      try {
+        res = await this.sdkInstance().beta.messages.create(buildParams(c, schema, messages));
+      } catch (e) {
+        await reservation?.settle(0);
+        throw e;
+      }
       const latencyMs = Date.now() - startedAt;
       const attempt: RecordedAttempt = {
         rawText: res.content.map((b) => (b.type === "text" ? (b.text ?? "") : "")).join(""),
@@ -217,17 +237,20 @@ export class ClaudeClient {
         },
         latencyMs,
       };
-      this.log.append({
-        at: this.clock().toISOString(),
-        sessionId,
-        flow: c.flow,
-        fixtureId: c.fixtureId,
-        model: attempt.model,
-        mode: this.mode,
-        attempt: i,
-        usage: attempt.usage,
-        costUsd: costUsd(attempt.model, attempt.usage),
-      });
+      const cost = costUsd(attempt.model, attempt.usage);
+      if (reservation) await reservation.settle(cost);
+      else
+        this.log.append({
+          at: this.clock().toISOString(),
+          sessionId,
+          flow: c.flow,
+          fixtureId: c.fixtureId,
+          model: attempt.model,
+          mode: this.mode,
+          attempt: i,
+          usage: attempt.usage,
+          costUsd: cost,
+        });
       return attempt;
     };
   }

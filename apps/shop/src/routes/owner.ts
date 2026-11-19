@@ -5,15 +5,9 @@ import { isOrderId, listContacts, listOrders } from "../db/queries.js";
 import { formBody } from "../http/body.js";
 import { sendError } from "../http/envelope.js";
 import { requireSameOrigin } from "../security/origin.js";
+import { createOwnerAuth, type OwnerAuth } from "../security/owner-auth.js";
 import type { Limiters } from "../security/rate-limits.js";
-import {
-  OWNER_COOKIE,
-  SESSION_TTL_MS,
-  createSessionCookie,
-  deriveSessionKey,
-  hasValidSession,
-  ownerTokenMatches,
-} from "../security/session.js";
+import { OWNER_COOKIE, SESSION_TTL_MS, createSessionCookie, ownerTokenMatches } from "../security/session.js";
 import type { ServiceContext } from "../services/context.js";
 import { TransitionSchema } from "../services/schemas.js";
 import { dashboardPage, loginPage, type OwnerTab } from "../views/owner.js";
@@ -26,19 +20,15 @@ const EVENT_FOR: Record<"CONFIRMED" | "DECLINED" | "CANCELLED", OrderEvent> = {
   CANCELLED: "cancel",
 };
 
-export function ownerRouter(ctx: ServiceContext, limiters: Limiters): Router {
+export function ownerRouter(ctx: ServiceContext, limiters: Limiters, auth: OwnerAuth = createOwnerAuth(ctx)): Router {
   const { config } = ctx;
   const router = Router();
   const sameOrigin = requireSameOrigin(config);
   const secure = config.publicBaseUrl.startsWith("https://");
   const cookieOptions = { httpOnly: true, sameSite: "strict", secure, path: "/" } as const;
 
-  // Cookies are keyed by SESSION_SECRET + the owner token hash, so rotating the token ends them all.
-  const sessionKey = deriveSessionKey(config.sessionSecret, config.ownerTokenHash);
-  // In memory by design: a restart forgets it, but cookies still expire after SESSION_TTL_MS.
-  let notBeforeMs = 0;
-  const signedIn = (req: Request): boolean =>
-    hasValidSession(req.headers.cookie, sessionKey, ctx.now(), notBeforeMs);
+  const sessionKey = auth.sessionKey;
+  const signedIn = auth.signedIn;
   const presentedToken = (req: Request): string =>
     typeof req.body?.token === "string" ? req.body.token.slice(0, MAX_TOKEN_LENGTH) : "";
 
@@ -76,7 +66,7 @@ export function ownerRouter(ctx: ServiceContext, limiters: Limiters): Router {
   });
 
   router.post("/owner/logout", formBody, sameOrigin, requireSession, (_req, res) => {
-    notBeforeMs = ctx.now();
+    auth.revokeAll();
     res.clearCookie(OWNER_COOKIE, cookieOptions);
     res.redirect(303, LOGIN_PATH);
   });

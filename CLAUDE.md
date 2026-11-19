@@ -9,7 +9,7 @@ AgentDoor turns a home baker's description (English/Hindi/Hinglish) into an owne
 
 ## Repository map
 - `packages/core`: schemas (Zod), canonical hash, pure engine, probes/lint, Ed25519 tokens, order state machine. **No I/O, no clock reads.**
-- `apps/shop`: deployed Express app: pages, REST, MCP (`/mcp`), owner dashboard, launch report, contact form, MySQL.
+- `apps/shop`: deployed Express app: pages, REST, MCP (`/mcp`), owner dashboard, launch report, contact form, MySQL, and the live `/launch` workspace.
 - `packages/ui`: shared HTML components (launcher + shop `/try`).
 - `apps/launcher`: local-only (127.0.0.1:4321): Claude orchestration, rehearsal, gate, `gddy` deploy adapter, UI.
 - `spike/`: T01 throwaway. `e2e/`: Playwright. `planning/`: frozen design docs.
@@ -23,7 +23,7 @@ Lanes: **A** = `packages/core`, `apps/shop`, `spike`, `e2e` · **B** = `apps/lau
 
 ## Non-negotiable rules
 - Policy is declarative JSON validated by Zod. **Never generate or eval code from model output.**
-- No model call anywhere in `apps/shop`. Prices/capacity/refusals are `packages/core` pure functions.
+- The deployed shop may call Claude only from `apps/shop/src/workspace/**` (the `/launch` workspace), server-side, live mode only (never fixtures), key from `process.env.ANTHROPIC_API_KEY`, spend through the MySQL budget. The storefront, `/order`, quotes, orders, MCP, owner pages, `/try` and `/launch-report` make zero model calls (`no-model-client.test.ts` enforces it). Prices/capacity/refusals are `packages/core` pure functions.
 - Money = integer paise. Time = injected `nowMs`, IST (+05:30, no DST).
 - Validate every external input with strict Zod schemas and size limits. Escape all HTML output.
 - Order writes: one transaction for quote consumption + capacity reservation + order creation; lock order `quote_redemptions → capacity_ledger → orders → audit_events`; bounded retry ≤3 with explicit ROLLBACK.

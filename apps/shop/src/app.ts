@@ -9,12 +9,15 @@ import { apiRouter } from "./routes/api.js";
 import { contactRouter, type SendEmail } from "./routes/contact.js";
 import { mcpRouter } from "./routes/mcp.js";
 import { ownerRouter } from "./routes/owner.js";
+import { createOwnerAuth } from "./security/owner-auth.js";
 import { pagesRouter } from "./routes/pages.js";
 import { requestId, securityHeaders } from "./security/headers.js";
 import { createLimiters } from "./security/rate-limits.js";
 import type { ServiceContext } from "./services/context.js";
 import { setOwnerContact } from "./views/site.js";
 import { identityOf } from "./views/storefront.js";
+import { loadWorkspaceConfig, type WorkspaceConfig } from "./workspace/config.js";
+import { createWorkspace } from "./workspace/routes.js";
 
 /**
  * Measured in T01 (spike/RESULTS.md): the GoDaddy edge is exactly one hop in front of the app and
@@ -33,6 +36,8 @@ export interface AppDeps {
   log?: Logger;
   sendEmail?: SendEmail;
   trustProxyHops?: number;
+  /** The /launch workspace settings; defaults to the process environment (closed when no access code is set). */
+  workspace?: WorkspaceConfig;
 }
 
 const MIN_CLIENT_ERROR = 400;
@@ -100,7 +105,11 @@ export function createApp(deps: AppDeps): Express {
 
   app.use(apiRouter(ctx, limiters));
   app.use(mcpRouter(ctx, limiters));
-  app.use(ownerRouter(ctx, limiters));
+  const ownerAuth = createOwnerAuth(ctx);
+  app.use(ownerRouter(ctx, limiters, ownerAuth));
+  const workspace = createWorkspace(ctx, limiters, ownerAuth, deps.workspace ?? loadWorkspaceConfig());
+  app.locals.workspaceJobs = workspace.jobs;
+  app.use(workspace.router);
   app.use(contactRouter(ctx, limiters, deps.sendEmail));
   app.use(pagesRouter(ctx, limiters));
   app.get("/robots.txt", (_req, res) => void res.type("text/plain").send(ROBOTS_TXT));

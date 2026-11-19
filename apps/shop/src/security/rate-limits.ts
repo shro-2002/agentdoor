@@ -20,6 +20,8 @@ export const LIMITS = {
   ownerAuthIp: { limit: 5, windowMs: OWNER_AUTH_WINDOW_MS },
   ownerAuthGlobal: { limit: 30, windowMs: OWNER_AUTH_WINDOW_MS },
   try: { limit: 60, windowMs: MINUTE_MS },
+  /** The /launch workspace pages and their status polling (a page polls about every 2 seconds). */
+  workspace: { limit: 240, windowMs: MINUTE_MS },
 } as const;
 
 export interface Limiters {
@@ -32,6 +34,8 @@ export interface Limiters {
   ownerAuthGlobal: RequestHandler;
   /** For the `/try/*` pages (T11). */
   try: RequestHandler;
+  /** For the /launch workspace. */
+  workspace: RequestHandler;
 }
 
 const GLOBAL_KEY = "owner-auth-global";
@@ -62,6 +66,7 @@ export function createLimiters(log: Logger): Limiters {
     ownerAuthIp: make("ownerAuthIp", { skipSuccessfulRequests: true }),
     ownerAuthGlobal: make("ownerAuthGlobal", { skipSuccessfulRequests: true, keyGenerator: () => GLOBAL_KEY }),
     try: make("try"),
+    workspace: make("workspace"),
   };
 }
 

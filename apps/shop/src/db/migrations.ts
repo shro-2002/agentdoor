@@ -57,6 +57,55 @@ export const MIGRATION_STATEMENTS: string[] = [
     detail JSON NULL,
     KEY idx_audit_order (order_id)
   ) DEFAULT CHARSET=utf8mb4`,
+  // The workspace at /launch (apps/shop/src/workspace). Nothing here is read by the storefront,
+  // orders, quotes or MCP; money is in millionths of a dollar so reserve/settle stay integer maths.
+  `CREATE TABLE IF NOT EXISTS ws_drafts (
+    id CHAR(32) PRIMARY KEY,
+    preview_id CHAR(32) NULL,
+    ip_hash CHAR(16) NOT NULL,
+    state MEDIUMTEXT NOT NULL,
+    version INT NOT NULL DEFAULT 1,
+    compile_rounds TINYINT NOT NULL DEFAULT 0,
+    scenario_runs TINYINT NOT NULL DEFAULT 0,
+    spent_micro BIGINT NOT NULL DEFAULT 0,
+    reserved_micro BIGINT NOT NULL DEFAULT 0,
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    UNIQUE KEY uq_ws_preview (preview_id)
+  ) DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS ws_jobs (
+    id CHAR(32) PRIMARY KEY,
+    draft_id CHAR(32) NOT NULL,
+    kind VARCHAR(12) NOT NULL,
+    status VARCHAR(10) NOT NULL,
+    payload TEXT NULL,
+    error_code VARCHAR(40) NULL,
+    error_message VARCHAR(300) NULL,
+    retryable TINYINT(1) NOT NULL DEFAULT 0,
+    created_ms BIGINT NOT NULL,
+    heartbeat_ms BIGINT NOT NULL,
+    finished_ms BIGINT NULL,
+    KEY idx_ws_jobs_draft (draft_id, created_ms)
+  ) DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS ws_budget (
+    id TINYINT PRIMARY KEY,
+    spent_micro BIGINT NOT NULL DEFAULT 0,
+    reserved_micro BIGINT NOT NULL DEFAULT 0
+  ) DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS ws_hits (
+    kind VARCHAR(16) NOT NULL,
+    subject CHAR(32) NOT NULL,
+    bucket BIGINT NOT NULL,
+    hits INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (kind, subject, bucket)
+  ) DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS ws_publish (
+    draft_id CHAR(32) PRIMARY KEY,
+    policy_json MEDIUMTEXT NOT NULL,
+    policy_hash CHAR(64) NOT NULL,
+    record_json TEXT NOT NULL,
+    prepared_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+  ) DEFAULT CHARSET=utf8mb4`,
 ];
 
 /** Throws on failure. The lock is session-scoped, so it needs one dedicated connection. */

@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
+import type { Express } from "express";
 import type { Pool } from "mysql2/promise";
 import {
   BusinessPolicySchema,
@@ -15,6 +16,7 @@ import {
 import { createApp } from "../../src/app.js";
 import { loadLaunchState } from "../../src/db/launch-state.js";
 import type { ShopConfig } from "../../src/config.js";
+import type { WorkspaceConfig } from "../../src/workspace/config.js";
 import { freshPool, keys, testDbConfig } from "./helpers.js";
 
 const HOUR_MS = 3_600_000;
@@ -74,6 +76,7 @@ export function bundle(opts: { editPrice?: boolean } = {}): string {
 }
 
 export interface TestShop {
+  app: Express;
   base: string;
   pool: Pool;
   logs: Record<string, unknown>[];
@@ -88,11 +91,16 @@ export interface StartOptions {
   appPool?: Pool;
   /** Overrides on top of the default test config, e.g. a different owner token hash. */
   config?: Partial<ShopConfig>;
+  /** The /launch workspace settings (default: closed, as when no access code is set). */
+  workspace?: WorkspaceConfig;
+  /** Replaces the fixed test clock (the workspace tests run on the real one). */
+  now?: () => number;
 }
 
 export async function startShop(opts: StartOptions = {}): Promise<TestShop> {
   const pool = await freshPool();
   await pool.query("DELETE FROM contact_messages");
+  for (const t of ["ws_jobs", "ws_drafts", "ws_hits", "ws_budget", "ws_publish"]) await pool.query(`DELETE FROM ${t}`);
   const logs: Record<string, unknown>[] = [];
   const clock = { now: NOW_MS };
   const launch = loadLaunchState(bundle(opts), keys.publicKey);
@@ -100,14 +108,16 @@ export async function startShop(opts: StartOptions = {}): Promise<TestShop> {
     config: { ...config, ...opts.config },
     pool: opts.appPool ?? pool,
     launch,
-    now: () => clock.now,
+    now: opts.now ?? (() => clock.now),
     log: (line) => logs.push(line),
     trustProxyHops: opts.trustProxyHops,
+    workspace: opts.workspace,
   });
   const server: Server = createServer(app);
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
   const { port } = server.address() as AddressInfo;
   return {
+    app,
     base: `http://127.0.0.1:${port}`,
     pool,
     logs,

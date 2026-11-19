@@ -5,6 +5,7 @@ import { keys, testDbConfig } from "./helpers.js";
 import {
   FAR_DATE,
   NOW_MS,
+  callTool,
   customerBody,
   getQuoteToken,
   json,
@@ -12,6 +13,7 @@ import {
   policy,
   quoteBody,
   restOrder,
+  rpc,
   startShop,
   type TestShop,
 } from "./http-helpers.js";
@@ -79,6 +81,20 @@ describe("REST API (I-API-1..3, 5, 6, SEC-1, SEC-2, SEC-6)", () => {
     expect(long.status).toBe(400);
   });
 
+  const expectSecurityHeaders = (r: Awaited<ReturnType<typeof json>>) => {
+    const csp = r.headers.get("content-security-policy") ?? "";
+    expect(csp).toContain("default-src 'self'");
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).toContain("form-action 'self'");
+    expect(csp).not.toContain("unsafe-inline'; script"); // no inline scripts
+    expect(csp).not.toContain("frame-src");
+    expect(r.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(r.headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
+    expect(r.headers.get("permissions-policy")).toBe("camera=(), microphone=(), geolocation=()");
+    expect(r.headers.get("x-request-id")).toBeTruthy();
+    if (r.body && r.body.meta) expect(r.body.meta.requestId).toBe(r.headers.get("x-request-id"));
+  };
+
   it("I-API-5: security headers and requestId on every kind of response", async () => {
     for (const [method, path, body] of [
       ["GET", "/healthz"],
@@ -86,18 +102,27 @@ describe("REST API (I-API-1..3, 5, 6, SEC-1, SEC-2, SEC-6)", () => {
       ["GET", "/no-such-page"],
       ["POST", "/api/quotes", "{bad"],
     ] as const) {
-      const r = await json(shop, method, path, body);
-      const csp = r.headers.get("content-security-policy") ?? "";
-      expect(csp).toContain("default-src 'self'");
-      expect(csp).toContain("frame-ancestors 'none'");
-      expect(csp).toContain("form-action 'self'");
-      expect(csp).not.toContain("unsafe-inline'; script"); // no inline scripts
-      expect(csp).not.toContain("frame-src");
-      expect(r.headers.get("x-content-type-options")).toBe("nosniff");
-      expect(r.headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
-      expect(r.headers.get("permissions-policy")).toBe("camera=(), microphone=(), geolocation=()");
-      expect(r.headers.get("x-request-id")).toBeTruthy();
-      if (r.body) expect(r.body.meta.requestId).toBe(r.headers.get("x-request-id"));
+      expectSecurityHeaders(await json(shop, method, path, body));
+    }
+  });
+
+  it("I-API-5 (R2 #10): headers are also on 413, on an MCP response and on a 429", async () => {
+    const tooBig = await json(shop, "POST", "/api/quotes", quoteBody({ notes: "x".repeat(20_000) }));
+    expect(tooBig.status).toBe(413);
+    expectSecurityHeaders(tooBig);
+
+    const mcp = await rpc(shop, "tools/list", {});
+    expect(mcp.status).toBe(200);
+    expectSecurityHeaders(mcp);
+
+    const limited = await startShop();
+    try {
+      let last = await json(limited, "POST", "/contact", "{}");
+      for (let i = 0; i < 5 && last.status !== 429; i += 1) last = await json(limited, "POST", "/contact", "{}");
+      expect(last.status).toBe(429);
+      expectSecurityHeaders(last);
+    } finally {
+      await limited.close();
     }
   });
 
@@ -289,6 +314,40 @@ describe("boot guard and database failure", () => {
       const home = await json(shop, "GET", "/");
       expect(home.status).toBe(200);
       expect(home.text).toContain("Not launched");
+    } finally {
+      await shop.close();
+    }
+  });
+
+  it("R2 #10: a validly signed token is refused with SHOP_NOT_LAUNCHED by an unlaunched shop (REST and MCP)", async () => {
+    const shop = await startShop({ editPrice: true });
+    try {
+      const payload: QuoteTokenPayload = {
+        v: 1,
+        qid: "44444444-4444-4444-8444-444444444444",
+        shop: policy.business.slug,
+        policyHash: policyHash(policy),
+        request: { lines: [{ itemId: "cookie-box", qty: 2, optionIds: [] }], fulfilment: { kind: "pickup" }, date: FAR_DATE },
+        totalPaise: 70_000,
+        capacityUnits: 2,
+        isRush: false,
+        iat: NOW_MS / 1000,
+        exp: NOW_MS / 1000 + 600,
+      };
+      const quoteToken = signQuoteToken(payload, keys.privateKey);
+      const rest = await json(shop, "POST", "/api/orders", { quoteToken, customer: customerBody, idempotencyKey: newKey() });
+      expect(rest.status).toBe(503);
+      expect(rest.body.error.code).toBe("SHOP_NOT_LAUNCHED");
+      const mcp = await callTool(shop, "place_order", {
+        quoteToken,
+        customerName: customerBody.name,
+        customerPhone: customerBody.phone,
+        idempotencyKey: newKey(),
+      });
+      expect(mcp.body.result.isError).toBe(true);
+      expect(mcp.body.result.structuredContent.error.code).toBe("SHOP_NOT_LAUNCHED");
+      const [rows] = await shop.pool.query("SELECT COUNT(*) AS n FROM orders");
+      expect((rows as { n: number }[])[0]!.n).toBe(0);
     } finally {
       await shop.close();
     }

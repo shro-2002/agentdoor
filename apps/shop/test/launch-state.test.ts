@@ -18,7 +18,11 @@ const policyPath = new URL(
 const policy = BusinessPolicySchema.parse(JSON.parse(readFileSync(policyPath, "utf8")));
 const keys = generateKeyPair();
 
-function bundle(opts: { editPrice?: boolean; criticalOpen?: number } = {}) {
+type Gaps = LaunchRecord["rehearsal"]["gapsFound"];
+
+function bundle(
+  opts: { editPrice?: boolean; criticalOpen?: number; approved?: number; gaps?: Gaps } = {},
+) {
   const dir = mkdtempSync(join(tmpdir(), "bundle-"));
   const record: LaunchRecord = {
     v: 1,
@@ -31,11 +35,11 @@ function bundle(opts: { editPrice?: boolean; criticalOpen?: number } = {}) {
       probes: 1,
       scenarios: 1,
       passed: 1,
-      gapsFound: [],
+      gapsFound: opts.gaps ?? [],
       criticalOpen: opts.criticalOpen ?? 0,
       resultsHash: "c".repeat(64),
     },
-    approvals: { required: 1, approved: 1 },
+    approvals: { required: 3, approved: opts.approved ?? 3 },
     publicKey: keys.publicKey,
     signedAt: "2026-11-19T00:00:00Z",
   };
@@ -69,6 +73,22 @@ describe("loadLaunchState (boot guard)", () => {
   it("rejects open critical gaps", () => {
     const s = loadLaunchState(bundle({ criticalOpen: 1 }), keys.publicKey);
     expect(s).toMatchObject({ launched: false, reason: "CRITICAL_GAPS_OPEN" });
+  });
+
+  it("R2 #8: a signed record with approved < required → not launched", () => {
+    const s = loadLaunchState(bundle({ approved: 2 }), keys.publicKey);
+    expect(s).toMatchObject({ launched: false, reason: "APPROVALS_INCOMPLETE" });
+  });
+
+  it("R2 #8: an unfixed critical gap listed in the record → not launched even if criticalOpen says 0", () => {
+    const open: Gaps = [{ id: "g1", severity: "critical", code: "PRICE_UNDEFINED", fixedInVersion: null }];
+    expect(loadLaunchState(bundle({ gaps: open }), keys.publicKey)).toMatchObject({
+      launched: false,
+      reason: "CRITICAL_GAPS_OPEN",
+    });
+    const fixed: Gaps = [{ id: "g1", severity: "critical", code: "PRICE_UNDEFINED", fixedInVersion: 2 }];
+    const warn: Gaps = [{ id: "g2", severity: "warning", code: "PRICE_UNDEFINED", fixedInVersion: null }];
+    expect(loadLaunchState(bundle({ gaps: [...fixed, ...warn] }), keys.publicKey).launched).toBe(true);
   });
 
   it("missing bundle files → not launched, never throws", () => {

@@ -1,7 +1,7 @@
 import type { Pool } from "mysql2/promise";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { placeOrder, transitionOrder } from "../../src/db/orders.js";
-import { count, freshPool, ledger, orderInput, quote, uuid } from "./helpers.js";
+import { count, freshPool, ledger, orderInput, quote } from "./helpers.js";
 
 let pool: Pool;
 beforeEach(async () => {
@@ -77,6 +77,19 @@ describe("concurrency", () => {
     expect(Number((rows as { s: string }[])[0]!.s)).toBe((await ledger(pool)).reserved);
     // No redemption without an order and no order without a redemption.
     expect(await count(pool, "quote_redemptions")).toBe(await count(pool, "orders"));
-    expect(uuid()).toBeTruthy();
+  });
+
+  it("R2 #10: one quote raced with 10 DIFFERENT idempotency keys → exactly one order, the rest QUOTE_ALREADY_USED", async () => {
+    const shared = quote();
+    const results = await Promise.all(
+      Array.from({ length: 10 }, () => placeOrder(pool, orderInput({ quote: shared }))),
+    );
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    const refused = results.filter((r) => !r.ok);
+    expect(refused).toHaveLength(9);
+    expect(refused.every((r) => !r.ok && r.code === "QUOTE_ALREADY_USED")).toBe(true);
+    expect(await count(pool, "orders")).toBe(1);
+    expect(await count(pool, "quote_redemptions")).toBe(1);
+    expect(await ledger(pool)).toEqual({ reserved: 1, rush: 0 });
   });
 });

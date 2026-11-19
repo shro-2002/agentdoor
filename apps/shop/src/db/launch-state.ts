@@ -13,6 +13,7 @@ export type NotLaunchedReason =
   | "BUNDLE_UNREADABLE"
   | "BAD_SIGNATURE"
   | "CRITICAL_GAPS_OPEN"
+  | "APPROVALS_INCOMPLETE"
   | "POLICY_HASH_MISMATCH";
 
 export type LaunchState =
@@ -37,7 +38,11 @@ export function loadLaunchState(bundleDir: string, trustedPublicKey: string): La
     return no("BUNDLE_UNREADABLE");
   }
   if (!verifyLaunchRecord(file, trustedPublicKey)) return no("BAD_SIGNATURE");
-  if (file.record.rehearsal.criticalOpen !== 0) return no("CRITICAL_GAPS_OPEN");
+  const { rehearsal, approvals } = file.record;
+  // Both the counter and the list are signed, so a shop is held back if either admits an open critical gap.
+  const openCritical = rehearsal.gapsFound.some((g) => g.severity === "critical" && g.fixedInVersion === null);
+  if (rehearsal.criticalOpen !== 0 || openCritical) return no("CRITICAL_GAPS_OPEN");
+  if (approvals.approved !== approvals.required) return no("APPROVALS_INCOMPLETE");
   const hash = policyHash(policy);
   if (file.record.policyHash !== hash) return no("POLICY_HASH_MISMATCH");
   return { launched: true, policy, policyHash: hash, record: file.record, signed: file };

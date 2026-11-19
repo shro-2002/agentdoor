@@ -36,7 +36,7 @@ function headline(ctx: ViewCtx): { title: string; text: string } {
   if (!ready.hasRun) return { title: "Rehearse your business", text: "Customers will test your rules before anyone orders. The checks are free and instant; Claude writes the customer messages." };
   if (ready.canPublish) return { title: "Ready for its first customer", text: "Every decision is made and every rule is confirmed." };
   if (ready.stale) return { title: "Your rules changed", text: "Run the checks again to bring this picture up to date." };
-  return { title: "Almost there", text: ready.blockers.slice(0, 2).join(" ") };
+  return { title: "A few things to settle", text: ready.blockers.slice(0, 2).join(" ") };
 }
 
 function chips(ctx: ViewCtx): SafeHtml {

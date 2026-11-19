@@ -22,7 +22,7 @@ beforeEach(() => {
 describe("pack", () => {
   it("builds the deployable artifact: generated manifest, npmrc, lockfile, bundle, dist", async () => {
     const res = await pack(options());
-    expect(res.entries.sort()).toEqual([".npmrc", "bundle/launch-record.json", "bundle/policy.json", "dist/index.js", "package-lock.json", "package.json"]);
+    expect(res.entries.sort()).toEqual([".npmrc", "bundle/launch-record.json", "bundle/policy.json", "dist/index.js", "package-lock.json", "package.json", "public/favicon.svg", "public/shop.css", "public/shop.js", "public/tokens.css", "public/ui.css"]);
     const pkg = JSON.parse(readFileSync(join(env.root, "out/shop/package.json"), "utf8"));
     expect(pkg).toMatchObject({ main: "dist/index.js", scripts: { build: "echo build", start: "node dist/index.js" }, engines: { node: "22.x" } });
     expect(Object.values(pkg.dependencies as Record<string, string>).every((v) => /^\d+\.\d+\.\d+$/.test(v))).toBe(true);

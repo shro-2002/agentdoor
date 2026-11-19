@@ -8,7 +8,7 @@ import { requireSameOrigin } from "../security/origin.js";
 import type { Limiters } from "../security/rate-limits.js";
 import type { ServiceContext } from "../services/context.js";
 import { ContactSchema } from "../services/schemas.js";
-import { contactPage } from "../views/pages.js";
+import { contactPage } from "../views/contact.js";
 
 export type SendEmail = (input: EmailInput) => Promise<{ messageId: string }>;
 
@@ -21,7 +21,7 @@ export function contactRouter(
 
   router.get("/contact", (req, res) => {
     const sent = req.query.sent;
-    res.type("html").send(contactPage(sent === "1" ? "sent" : sent === "0" ? "saved" : null));
+    res.type("html").send(contactPage(sent === "1" ? "sent" : sent === "0" ? "saved" : null, ctx.launch));
   });
 
   router.post("/contact", limiters.contact, formBody, requireSameOrigin(ctx.config), async (req, res) => {

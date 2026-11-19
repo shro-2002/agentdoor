@@ -16,7 +16,7 @@ import {
 } from "../security/session.js";
 import type { ServiceContext } from "../services/context.js";
 import { TransitionSchema } from "../services/schemas.js";
-import { dashboardPage, loginPage } from "../views/pages.js";
+import { dashboardPage, loginPage, type OwnerTab } from "../views/owner.js";
 
 const LOGIN_PATH = "/owner/login";
 const MAX_TOKEN_LENGTH = 200;
@@ -81,9 +81,10 @@ export function ownerRouter(ctx: ServiceContext, limiters: Limiters): Router {
     res.redirect(303, LOGIN_PATH);
   });
 
-  router.get("/owner", requireSession, async (_req, res) => {
+  router.get("/owner", requireSession, async (req, res) => {
     const [orders, contacts] = await Promise.all([listOrders(ctx.pool), listContacts(ctx.pool)]);
-    res.set("Cache-Control", "no-store").type("html").send(dashboardPage(orders, contacts));
+    const tab: OwnerTab = req.query.tab === "confirmed" || req.query.tab === "all" ? req.query.tab : "pending";
+    res.set("Cache-Control", "no-store").type("html").send(dashboardPage(orders, contacts, ctx.launch, tab));
   });
 
   router.post("/owner/orders/:id/transition", formBody, sameOrigin, requireSession, async (req, res) => {

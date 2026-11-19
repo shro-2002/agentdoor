@@ -1,0 +1,32 @@
+{
+  "language": "en",
+  "minAccuracy": 0.9,
+  "items": [
+    { "match": ["chocolate"], "unitPricePaise": 60000, "maxQtyPerOrder": 3, "prepHours": 48 },
+    { "match": ["vanilla"], "unitPricePaise": 65000, "maxQtyPerOrder": 3, "prepHours": 48 },
+    { "match": ["cookie"], "unitPricePaise": 35000, "maxQtyPerOrder": 10, "prepHours": 24 },
+    { "match": ["brownie"], "unitPricePaise": 48000, "maxQtyPerOrder": 5, "prepHours": 24 }
+  ],
+  "areas": [
+    { "match": ["baner"], "feePaise": 0 },
+    { "match": ["aundh"], "feePaise": 8000 },
+    { "match": ["wakad"], "feePaise": 12000 },
+    { "match": ["hinjewadi", "hinjawadi"], "feePaise": 15000 }
+  ],
+  "fixed": {
+    "schedule.minLeadHours": 48,
+    "schedule.closedWeekdays": [1],
+    "rush.withinHours": 24,
+    "rush.surcharge": { "kind": "flat", "paise": 20000 },
+    "fulfilment.delivery.enabled": true,
+    "orderRules.minOrderPaise": 30000,
+    "orderRules.customRequests": "ASK_OWNER",
+    "orderRules.quoteValidityMinutes": 30
+  },
+  "mustAsk": ["capacity.unitsPerDay", "rush.maxRushUnitsPerDay", "fulfilment.delivery.unlistedArea"],
+  "afterAnswers": {
+    "capacity.unitsPerDay": 15,
+    "rush.maxRushUnitsPerDay": 4,
+    "fulfilment.delivery.unlistedArea": "REFUSE"
+  }
+}

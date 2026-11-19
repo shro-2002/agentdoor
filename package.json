@@ -18,7 +18,8 @@
     "e2e": "playwright test",
     "launcher": "tsx apps/launcher/src/server.ts",
     "shop": "tsx apps/shop/src/server.ts",
-    "deploy": "tsx scripts/deploy.ts"
+    "deploy": "tsx scripts/deploy.ts",
+    "record-fixtures": "AGENTDOOR_LLM_MODE=record tsx apps/launcher/src/claude/record.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

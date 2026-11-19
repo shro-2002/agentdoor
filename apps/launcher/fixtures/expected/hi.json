@@ -1,0 +1,26 @@
+{
+  "language": "hi",
+  "minAccuracy": 0.8,
+  "items": [
+    { "match": ["चॉकलेट", "chocolate"], "unitPricePaise": 80000, "maxQtyPerOrder": 3, "prepHours": 48 },
+    { "match": ["गुझिया", "gujiya", "gujia", "ghujia"], "unitPricePaise": 50000, "maxQtyPerOrder": 6, "prepHours": 48 },
+    { "match": ["कुकी", "cookie"], "unitPricePaise": 35000, "maxQtyPerOrder": 10, "prepHours": 24 }
+  ],
+  "areas": [
+    { "match": ["अरेरा", "arera"], "feePaise": 7000 },
+    { "match": ["कोलार", "kolar"], "feePaise": 10000 },
+    { "match": ["बैरागढ़", "bairagarh"], "feePaise": 15000 }
+  ],
+  "fixed": {
+    "capacity.unitsPerDay": 20,
+    "schedule.minLeadHours": 48,
+    "schedule.closedWeekdays": [0],
+    "rush": null,
+    "fulfilment.delivery.enabled": true,
+    "fulfilment.delivery.unlistedArea": "REFUSE",
+    "orderRules.minOrderPaise": 40000,
+    "orderRules.customRequests": "ASK_OWNER",
+    "orderRules.quoteValidityMinutes": 30
+  },
+  "mustAsk": []
+}

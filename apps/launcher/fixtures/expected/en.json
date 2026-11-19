@@ -1,0 +1,26 @@
+{
+  "language": "en",
+  "minAccuracy": 0.9,
+  "items": [
+    { "match": ["butterscotch"], "unitPricePaise": 70000, "maxQtyPerOrder": 4, "prepHours": 48 },
+    { "match": ["carrot"], "unitPricePaise": 75000, "maxQtyPerOrder": 3, "prepHours": 48 },
+    { "match": ["cupcake"], "unitPricePaise": 42000, "maxQtyPerOrder": 8, "prepHours": 24 }
+  ],
+  "areas": [
+    { "match": ["vaishali"], "feePaise": 6000 },
+    { "match": ["malviya"], "feePaise": 10000 },
+    { "match": ["c-scheme", "c scheme"], "feePaise": 15000 }
+  ],
+  "fixed": {
+    "capacity.unitsPerDay": 24,
+    "schedule.minLeadHours": 48,
+    "schedule.closedWeekdays": [0],
+    "rush": { "withinHours": 24, "surcharge": { "kind": "flat", "paise": 25000 }, "maxRushUnitsPerDay": 3 },
+    "fulfilment.delivery.enabled": true,
+    "fulfilment.delivery.unlistedArea": "REFUSE",
+    "orderRules.minOrderPaise": 40000,
+    "orderRules.customRequests": "REFUSE",
+    "orderRules.quoteValidityMinutes": 30
+  },
+  "mustAsk": []
+}

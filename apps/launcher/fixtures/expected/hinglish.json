@@ -1,0 +1,26 @@
+{
+  "language": "hinglish",
+  "minAccuracy": 0.9,
+  "items": [
+    { "match": ["rasmalai"], "unitPricePaise": 90000, "maxQtyPerOrder": 2, "prepHours": 72 },
+    { "match": ["ladoo", "laddu"], "unitPricePaise": 45000, "maxQtyPerOrder": 10, "prepHours": 48 },
+    { "match": ["namak"], "unitPricePaise": 30000, "maxQtyPerOrder": 12, "prepHours": 24 }
+  ],
+  "areas": [
+    { "match": ["gomti"], "feePaise": 5000 },
+    { "match": ["aliganj"], "feePaise": 8000 },
+    { "match": ["indira"], "feePaise": 12000 }
+  ],
+  "fixed": {
+    "capacity.unitsPerDay": 30,
+    "schedule.minLeadHours": 72,
+    "schedule.closedWeekdays": [2],
+    "rush": null,
+    "fulfilment.delivery.enabled": true,
+    "fulfilment.delivery.unlistedArea": "ASK_OWNER",
+    "orderRules.minOrderPaise": 50000,
+    "orderRules.customRequests": "ASK_OWNER",
+    "orderRules.quoteValidityMinutes": 45
+  },
+  "mustAsk": []
+}

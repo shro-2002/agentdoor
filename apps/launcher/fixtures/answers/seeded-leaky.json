@@ -1,0 +1,5 @@
+{
+  "capacity.unitsPerDay": "Around 15 units a day in total, not more.",
+  "rush.maxRushUnitsPerDay": "No more than 4 rush units in a day.",
+  "fulfilment.delivery.unlistedArea": "For any area that is not on my list, just refuse the order."
+}

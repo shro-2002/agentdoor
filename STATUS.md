@@ -3,8 +3,8 @@
 Keep this under ~150 lines. Newest entries on top within each section. Each task appends ≤10 lines.
 
 ## Now
-- Phase: **IMPLEMENTATION READY** (2026-11-18 ~20:40 IST), subject only to the live-platform feasibility tests in T01: MCP via the GoDaddy CDN to a Claude connector; managed MySQL present + `max_connections`; mail gateway → mailbox; proxy topology for `trust proxy`; `updateSecrets` via `gddy api call --file` per variant; persistence across restart and redeploy. Plus the checkout total in INR (T00).
-- Next: **T00** tonight (you: submission time, Console keys, approve/buy Economy + domain + mailbox after checking the final INR total) and **T02** in parallel → **T01** spike.
+- Phase: **IMPLEMENTATION READY**. T01 live-platform spike done (2026-11-19): every feasibility risk cleared except two owner confirmations (hotspot IP sample, test mail seen in inbox).
+- Next: owner confirms the two items; then T03 engine exports → T05 persistence. Submission time still UNCONFIRMED.
 - No product code yet. Claude spend so far: $0. GoDaddy spend so far: $0.
 - Deadline: Fri 20 Nov 2026. Exact submission time: **UNCONFIRMED**. Assume 18:00 IST.
 - Reviews remaining: **R2** (after T06) and **R4** (before submit). No further architecture reviews unless a fatal feasibility blocker appears.
@@ -12,16 +12,19 @@ Keep this under ~150 lines. Newest entries on top within each section. Each task
 ## Platform facts (public-safe; account details live in `private/ACCOUNT_FACTS.md`)
 | Item | Value |
 |---|---|
-| Submission deadline (exact) | |
-| MCP via CDN (curl / Claude.ai connector / Claude Code) | |
-| `DB_*` present; MySQL version / `max_connections` | |
-| Proxy topology → `trust proxy` value | |
-| Mail gateway → mailbox delivered | |
-| `updateSecrets` via `gddy api call --file`: works per variant? | |
-| Persistence across restart + redeploy | |
-| Redeploy wall time | |
+| Submission deadline (exact) | UNCONFIRMED |
+| MCP via CDN (curl / Claude.ai connector / Claude Code) | all three work (stateless streamable HTTP, no auth); SSE not buffered (1 s ticks) |
+| `DB_*` present; MySQL version / `max_connections` | present; MySQL 8.4.8-8, 200; `FOR UPDATE` txn OK |
+| Proxy topology → `trust proxy` value | **1**. Edge appends real IP as last `X-Forwarded-For`, keeps client values; `CF-Connecting-IP` unforgeable (spoof → error 1000). Key on `req.ip`. Hotspot sample pending |
+| Mail gateway → mailbox delivered | gateway accepts (200 + messageId); inbox delivery awaiting owner confirmation |
+| `updateSecrets` via `gddy api call --file`: works per variant? | yes, PREVIEW and PUBLISH separately, needs `application/json-patch+json` |
+| Persistence across restart + redeploy | MySQL rows survive both; disk not relied on |
+| Redeploy wall time | ≈125 s (upload 11 s + publish); restart ≈5 s |
+| Custom domain | agentdoor.shop ACTIVE, HTTPS valid (Google Trust Services), http→https 301, apex + www |
+| Publish health probe | hits `GET /`; must return 200 or publish fails after ~2 min |
 
 ## Decisions (append; never edit past entries)
+- 2026-11-19 (T01): `app.set('trust proxy', 1)`; rate-limit key is `req.ip` (rightmost XFF), never the leftmost entry (client-controlled). Every build must serve `GET /` with 200 for the publish health probe. Secrets use `application/json-patch+json`.
 - 2026-11-18 (revision 2): `/try` replay mandatory with three provenance badges (RECORDED · Claude / LIVE · deterministic / RECORDED · deployment evidence), embedded video, persistent nav. Optional `/try/live` (T14) only after R1–R20 pass and the ledger is ≤ $75: access code + hard $5 app budget. Trusted proxy topology measured in T01; separate buckets mcp-read / quote-rest / order-create / contact / owner-auth / try. Implementation sessions explicitly read CLAUDE.md; human cost checkpoints. Secrets only in the `updateSecrets` JSON body (`gddy api call --file`), PREVIEW and PUBLISH separately, never argv. Two-way provenance coverage gate. Global lock order `quote_redemptions → capacity_ledger → orders → audit_events`, bounded retry with ROLLBACK. Ledgers and account facts moved to gitignored `private/`. No AI-assistance disclosure file is committed to the repo (your decision, 2026-11-18).
 - 2026-11-18: Hosting plan = **Economy 1-month ($4.99)**, the cheapest plan with a publish slot + managed MySQL. Exactly one app (`agentdoor-shop`) for the whole hackathon; all deploys reuse it. Free PREVIEW for development checks.
 - 2026-11-18: Separate GoDaddy budget, cap $40 (`private/GODADDY_LEDGER.md`); every purchase needs explicit approval; mailbox free trial preferred over Titan yearly ($23.88).
@@ -35,6 +38,7 @@ Keep this under ~150 lines. Newest entries on top within each section. Each task
 
 ## Task log
 <!-- T## — date — result (done/blocked) — key decisions — open issues — next -->
+- T01 (resumed) — 2026-11-19 — done except 2 owner confirmations — attach, secrets (both variants), publish (2nd try: needed `GET /`), check.sh, MCP via Claude Code + Claude.ai connector, domain ACTIVE + HTTPS, mail gateway accepts, restart + redeploy persistence, still one app. Decisions: trust proxy = 1 (see Decisions). Issues: hotspot `/spike/ip` sample and inbox delivery unconfirmed; gddy 0.2.38 available, not installed. Next: owner confirms; then T03/T05. Details in `spike/RESULTS.md`.
 - T02 — 2026-11-18 — done — npm workspaces (core, ui stub, shop, launcher), all deps installed exact (zod 4, vitest 5, TS 7); strict domain schemas, separate unbounded wire schemas (CompileResult, ScenarioWire), canonicalJson + policyHash, fixtures policy.bakery/seeded-leaky; U-SCH-1..4, U-HASH-1..3, U-CMP-7 (schema half) green (49 tests). Decisions: vitest 5 has no `vitest.workspace.ts`, so `vitest.config.ts` with `test.projects`; wire `Localized.hi` is `string|null` (domain: optional), mapping code must drop nulls; check-secrets.sh skips `planning/` (docs quote the patterns). Next: T03 engine. Not done: Prettier/ESLint config beyond defaults, Playwright browsers not installed.
 - T04 — 2026-11-18 — done — `core/crypto` (keys, quoteToken, launchRecord) + `orders/stateMachine`; `scripts/gen-keys.ts`; U-SIG-1..6, U-SM-1..3 green (17 tests). Decisions: keys are base64 (private PKCS#8 DER, public raw 32 B); `verifyQuoteToken` checks signature → payload shape → expiry → policy hash; `verifyLaunchRecord` takes the trusted public key from the caller (env), never from the file, and requires the embedded key to match; token `request` and gap `code` typed structurally (no engine dependency); invalid transition code `INVALID_TRANSITION` (not in 04 §6, shop should map to 409). gen-keys refuses to overwrite without `--force`. Issue: `tsc` fails on untracked T03 tests (engine/dates exports missing from index), not part of T04. Next: T03 engine exports, then T05 persistence.
 - T01 — 2026-11-18 — **BLOCKED (partial)** — no Economy subscription (`totalAvailableSlots: 0`), no domain/mailbox: T00 purchases not done, and I never purchase. Done: `spike/` built and verified locally (healthz/ip/env/db/mail/sse/MCP stateless), `scripts/set-secrets.mjs`, the single app `agentdoor-shop` created (id in `.agentdoor/deploy.json`), spike uploaded to PREVIEW (import ~10 s). Details in `spike/RESULTS.md`. Next: you buy Economy (T00), then resume at `subscription attach`. Also needs `CONTACT_FORM_RECIPIENT_EMAIL` in private/ACCOUNT_FACTS.md (not recorded yet).

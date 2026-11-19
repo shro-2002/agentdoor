@@ -29,6 +29,8 @@ export function pagesRouter(ctx: ServiceContext, limiters: Limiters): Router {
   });
 
   const loadSession = sessionLoader(defaultBundleDir());
+  // Public and CPU-heavy (it re-runs a rehearsal): same bucket as the /try pages.
+  router.use("/launch-report", limiters.try);
   router.get("/launch-report", (_req, res) => {
     const l = loadSession();
     const extras = l.ok

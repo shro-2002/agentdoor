@@ -77,7 +77,27 @@ function resolveScenarios(session: TrySession, nowMs: number): { wire: TrySessio
   });
 }
 
+// A rehearsal run costs real CPU and the pages that call it are public, so one result is reused for
+// a short window per loaded session and version. Pages say "computed now"; a minute is still now.
+const MEMO_WINDOW_MS = 60_000;
+const MEMO_MAX_ENTRIES = 400;
+const memo = new WeakMap<TrySession, Map<string, LiveRun>>();
+
 export function runLive(session: TrySession, version: number, nowMs: number): LiveRun {
+  let runs = memo.get(session);
+  if (!runs || runs.size >= MEMO_MAX_ENTRIES) {
+    runs = new Map();
+    memo.set(session, runs);
+  }
+  const key = `${version}:${Math.floor(nowMs / MEMO_WINDOW_MS)}`;
+  const hit = runs.get(key);
+  if (hit) return hit;
+  const fresh = runLiveUncached(session, version, nowMs);
+  runs.set(key, fresh);
+  return fresh;
+}
+
+function runLiveUncached(session: TrySession, version: number, nowMs: number): LiveRun {
   const policy = session.policyVersions[version - 1]!;
   const hash = policyHash(policy);
   const probes = runProbes(policy, generateProbes(policy, nowMs, Number.parseInt(hash.slice(0, SEED_HEX_CHARS), HEX)));

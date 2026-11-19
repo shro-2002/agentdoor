@@ -3,8 +3,8 @@
 Keep this under ~150 lines. Newest entries on top within each section. Each task appends ≤10 lines.
 
 ## Now
-- Phase: **IMPLEMENTATION READY**. T01 live-platform spike done (2026-11-19): every feasibility risk cleared except two owner confirmations (hotspot IP sample, test mail seen in inbox).
-- Next: owner confirms the two items; then T03 engine exports → T05 persistence. Submission time still UNCONFIRMED.
+- Phase: **IMPLEMENTATION READY**. T01 live-platform spike done (2026-11-19): every feasibility risk cleared except one: app-sent gateway mail not yet seen in the inbox (inbound mail and hotspot proxy sample confirmed).
+- Next: owner checks inbox/spam for the spike mail; then T03 engine exports → T05 persistence. Submission time still UNCONFIRMED.
 - No product code yet. Claude spend so far: $0. GoDaddy spend so far: $0.
 - Deadline: Fri 20 Nov 2026. Exact submission time: **UNCONFIRMED**. Assume 18:00 IST.
 - Reviews remaining: **R2** (after T06) and **R4** (before submit). No further architecture reviews unless a fatal feasibility blocker appears.
@@ -15,8 +15,8 @@ Keep this under ~150 lines. Newest entries on top within each section. Each task
 | Submission deadline (exact) | UNCONFIRMED |
 | MCP via CDN (curl / Claude.ai connector / Claude Code) | all three work (stateless streamable HTTP, no auth); SSE not buffered (1 s ticks) |
 | `DB_*` present; MySQL version / `max_connections` | present; MySQL 8.4.8-8, 200; `FOR UPDATE` txn OK |
-| Proxy topology → `trust proxy` value | **1**. Edge appends real IP as last `X-Forwarded-For`, keeps client values; `CF-Connecting-IP` unforgeable (spoof → error 1000). Key on `req.ip`. Hotspot sample pending |
-| Mail gateway → mailbox delivered | gateway accepts (200 + messageId); inbox delivery awaiting owner confirmation |
+| Proxy topology → `trust proxy` value | **1**. Edge appends real IP as last `X-Forwarded-For`, keeps client values; `CF-Connecting-IP` unforgeable (spoof → error 1000). Key on `req.ip`. Confirmed on laptop and phone (mobile data) |
+| Mail gateway → mailbox delivered | inbound Gmail → hello@ delivered (MX OK). App gateway accepts (200 + messageId); app-sent mail not yet seen in inbox |
 | `updateSecrets` via `gddy api call --file`: works per variant? | yes, PREVIEW and PUBLISH separately, needs `application/json-patch+json` |
 | Persistence across restart + redeploy | MySQL rows survive both; disk not relied on |
 | Redeploy wall time | ≈125 s (upload 11 s + publish); restart ≈5 s |
@@ -38,7 +38,7 @@ Keep this under ~150 lines. Newest entries on top within each section. Each task
 
 ## Task log
 <!-- T## — date — result (done/blocked) — key decisions — open issues — next -->
-- T01 (resumed) — 2026-11-19 — done except 2 owner confirmations — attach, secrets (both variants), publish (2nd try: needed `GET /`), check.sh, MCP via Claude Code + Claude.ai connector, domain ACTIVE + HTTPS, mail gateway accepts, restart + redeploy persistence, still one app. Decisions: trust proxy = 1 (see Decisions). Issues: hotspot `/spike/ip` sample and inbox delivery unconfirmed; gddy 0.2.38 available, not installed. Next: owner confirms; then T03/T05. Details in `spike/RESULTS.md`.
+- T01 (resumed) — 2026-11-19 — done except gateway-to-inbox delivery — attach, secrets (both variants), publish (2nd try: needed `GET /`), check.sh, MCP via Claude Code + Claude.ai connector, domain ACTIVE + HTTPS, mail gateway accepts, restart + redeploy persistence, still one app. Decisions: trust proxy = 1 (see Decisions). Issues: app-sent (gateway) mail not yet seen in inbox; gddy 0.2.38 available, not installed. Next: owner checks inbox/spam for the spike mail; then T03/T05. Details in `spike/RESULTS.md`.
 - T02 — 2026-11-18 — done — npm workspaces (core, ui stub, shop, launcher), all deps installed exact (zod 4, vitest 5, TS 7); strict domain schemas, separate unbounded wire schemas (CompileResult, ScenarioWire), canonicalJson + policyHash, fixtures policy.bakery/seeded-leaky; U-SCH-1..4, U-HASH-1..3, U-CMP-7 (schema half) green (49 tests). Decisions: vitest 5 has no `vitest.workspace.ts`, so `vitest.config.ts` with `test.projects`; wire `Localized.hi` is `string|null` (domain: optional), mapping code must drop nulls; check-secrets.sh skips `planning/` (docs quote the patterns). Next: T03 engine. Not done: Prettier/ESLint config beyond defaults, Playwright browsers not installed.
 - T04 — 2026-11-18 — done — `core/crypto` (keys, quoteToken, launchRecord) + `orders/stateMachine`; `scripts/gen-keys.ts`; U-SIG-1..6, U-SM-1..3 green (17 tests). Decisions: keys are base64 (private PKCS#8 DER, public raw 32 B); `verifyQuoteToken` checks signature → payload shape → expiry → policy hash; `verifyLaunchRecord` takes the trusted public key from the caller (env), never from the file, and requires the embedded key to match; token `request` and gap `code` typed structurally (no engine dependency); invalid transition code `INVALID_TRANSITION` (not in 04 §6, shop should map to 409). gen-keys refuses to overwrite without `--force`. Issue: `tsc` fails on untracked T03 tests (engine/dates exports missing from index), not part of T04. Next: T03 engine exports, then T05 persistence.
 - T01 — 2026-11-18 — **BLOCKED (partial)** — no Economy subscription (`totalAvailableSlots: 0`), no domain/mailbox: T00 purchases not done, and I never purchase. Done: `spike/` built and verified locally (healthz/ip/env/db/mail/sse/MCP stateless), `scripts/set-secrets.mjs`, the single app `agentdoor-shop` created (id in `.agentdoor/deploy.json`), spike uploaded to PREVIEW (import ~10 s). Details in `spike/RESULTS.md`. Next: you buy Economy (T00), then resume at `subscription attach`. Also needs `CONTACT_FORM_RECIPIENT_EMAIL` in private/ACCOUNT_FACTS.md (not recorded yet).

@@ -62,7 +62,23 @@ export function runsTable(runs: RunFigures[]): SafeHtml {
     <thead><tr><th scope="col">Run</th><th scope="col" class="num">Checks</th><th scope="col" class="num">Passed</th><th scope="col" class="num">Gaps open</th></tr></thead>
     <tbody>${runs.map((r) => html`<tr><th scope="row">${r.label}</th><td class="num">${r.checks}</td><td class="num">${r.passed}</td><td class="num">${r.gaps.open}</td></tr>`)}</tbody>
   </table></div>
-  <ul class="muted runs-basis">${runs.map((r) => html`<li>${r.label}: ${r.basis}. Gaps open = gaps still unsettled when that run ended.</li>`)}</ul>`;
+  <ul class="muted runs-basis">${runs.map((r) => html`<li>${r.label}: ${r.basis}. Gaps open = gaps still unsettled when that run ended.</li>`)}</ul>
+  ${categoryTable(runs)}`;
+}
+
+/** The four kinds of finding, one row each and one column per run. Different things, so never summed. */
+export function categoryTable(runs: RunFigures[]): SafeHtml {
+  const rows: [string, (r: RunFigures) => number][] = [
+    ["Business-policy gaps", (r) => r.categories.policy],
+    ["Pending approvals", (r) => r.categories.approval],
+    ["Scenario mismatches", (r) => r.categories.scenario],
+    ["Engine failures", (r) => r.categories.engine],
+  ];
+  return html`<div class="table-wrap"><table class="runs runs--kinds">
+    <caption class="visually-hidden">Open findings by kind, for each rehearsal run</caption>
+    <thead><tr><th scope="col">Open at the end of the run</th>${runs.map((r) => html`<th scope="col" class="num">${r.label}</th>`)}</tr></thead>
+    <tbody>${rows.map(([label, pick]) => html`<tr><th scope="row">${label}</th>${runs.map((r) => html`<td class="num">${pick(r)}</td>`)}</tr>`)}</tbody>
+  </table></div>`;
 }
 
 function caught(groups: GapGroup[], currentVersion: number): SafeHtml {

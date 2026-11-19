@@ -2,7 +2,7 @@ import type { BusinessPolicy } from "@agentdoor/core";
 import { html, icon, type SafeHtml } from "@agentdoor/ui";
 import { DIETARY, UNIT_WORD, inr, spanOfHours } from "../format.js";
 import { wave } from "./ornaments.js";
-import { PRODUCT_PHOTOS, photoImg } from "./photos.js";
+import { photoImg, productPhotoFor } from "./photos.js";
 
 type Item = BusinessPolicy["catalog"][number];
 
@@ -25,8 +25,7 @@ function dietaryTags(tags: string[]): SafeHtml {
 }
 
 function photoFor(item: Item): SafeHtml {
-  const photo = PRODUCT_PHOTOS[item.id];
-  return html`<div class="pcard__photo ${photo ? "" : "pcard__photo--empty"}">${photo ? photoImg(photo, { className: "photo" }) : ""}</div>`;
+  return html`<div class="pcard__photo">${photoImg(productPhotoFor(item), { className: "photo" })}</div>`;
 }
 
 function card(policy: BusinessPolicy, item: Item): SafeHtml {

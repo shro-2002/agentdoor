@@ -37,6 +37,8 @@ export interface LayoutOptions {
   /** Script files under /assets (never inline: strict CSP). */
   scripts?: string[];
   bodyClass?: string;
+  /** A workspace preview of a draft shop: this bar on top, no persona note, no contact address. */
+  preview?: SafeHtml;
 }
 
 const DEFAULT_SHOP: ShopIdentity = { name: "The shop" };
@@ -52,10 +54,11 @@ function styles(chrome: Chrome, extra: string[] = []): SafeHtml {
   if (chrome === "owner") {
     return html`<link rel="stylesheet" href="/assets/tokens.css"><link rel="stylesheet" href="/assets/ui.css"><link rel="stylesheet" href="/assets/shop.css">`;
   }
+  const more = extra.map((f) => html`<link rel="stylesheet" href="/assets/${f}">`);
   const own =
     chrome === "bakery"
-      ? html`<link rel="stylesheet" href="/assets/bakery.css">`
-      : html`<link rel="stylesheet" href="/assets/ui.css"><link rel="stylesheet" href="/assets/agentdoor.css">${extra.map((f) => html`<link rel="stylesheet" href="/assets/${f}">`)}`;
+      ? html`<link rel="stylesheet" href="/assets/bakery.css">${more}`
+      : html`<link rel="stylesheet" href="/assets/ui.css"><link rel="stylesheet" href="/assets/agentdoor.css">${more}`;
   return html`<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="${FONT_CSS[chrome]}">${own}`;
 }
@@ -84,7 +87,8 @@ function parts(o: LayoutOptions, chrome: Chrome, shop: ShopIdentity): Parts {
     return { head, foot: agentDoorFooter(repoUrl), top: html`` };
   }
   if (chrome === "owner") return { head: ownerHeader(shop), foot: ownerFooter(shop, email, repoUrl), top: ownerRibbon };
-  return { head: bakeryHeader(shop, o.active as BakeryNav | undefined), foot: bakeryFooter(shop, email), top: html`` };
+  const preview = o.preview !== undefined;
+  return { head: bakeryHeader(shop, o.active as BakeryNav | undefined), foot: bakeryFooter(shop, preview ? "" : email, !preview), top: o.preview ?? html`` };
 }
 
 /** The page shell: no inline script or style anywhere, so the strict CSP holds. */

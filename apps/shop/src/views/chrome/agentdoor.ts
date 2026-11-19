@@ -4,7 +4,7 @@ import { html, icon, raw, type SafeHtml } from "@agentdoor/ui";
 export type AgentDoorNav = "launch" | "try" | "report";
 
 const NAV: { key: AgentDoorNav; href: string; label: string }[] = [
-  { key: "launch", href: "/launch", label: "Overview" },
+  { key: "launch", href: "/launch", label: "Workspace" },
   { key: "try", href: "/try", label: "Walk-through" },
   { key: "report", href: "/launch-report", label: "Launch report" },
 ];
@@ -29,9 +29,10 @@ export function agentDoorFooter(repoUrl: string): SafeHtml {
     <div class="wrap ad-foot__row">
       <div>
         <p class="ad-foot__name">AgentDoor</p>
-        <p>The launch platform for small businesses. The example on this site is a recorded real launch; the live launcher is coming next.</p>
+        <p>Diagnostics: a recorded launch of an illustrative bakery, kept so its numbers can be checked.</p>
       </div>
       <ul class="ad-foot__links">
+        <li><a href="/launch">Open the workspace</a></li>
         <li><a href="/try">Walk through the launch</a></li>
         <li><a href="/launch-report">Launch report</a></li>
         <li><a href="/">See the shop it launched</a></li>

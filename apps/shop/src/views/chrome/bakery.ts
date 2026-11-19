@@ -34,7 +34,7 @@ function whereLine(shop: ShopIdentity): string {
   return `${shop.city ? `${shop.city}: delivering` : "Delivering"} to ${areas.join(", ")}.`;
 }
 
-export function bakeryFooter(shop: ShopIdentity, email: string): SafeHtml {
+export function bakeryFooter(shop: ShopIdentity, email: string, showPersona = true): SafeHtml {
   const owner = shop.ownerFirstName ?? "the owner";
   return html`<footer class="foot">
     <div class="wrap foot__grid">
@@ -56,7 +56,7 @@ export function bakeryFooter(shop: ShopIdentity, email: string): SafeHtml {
       </div>
     </div>
     <div class="wrap foot__legal">
-      ${personaNote()}
+      ${showPersona ? personaNote() : ""}
       <p class="foot__small">Photos: <a href="${PEXELS_URL}" rel="noopener">Pexels</a> · Powered by <a href="/launch">AgentDoor</a></p>
     </div>
   </footer>`;

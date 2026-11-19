@@ -13,8 +13,6 @@ import { runLive } from "../src/services/try-live.js";
 import { sessionLoader, type TrySession } from "../src/services/try-session.js";
 import { areaFee, earliestDate, inr, rushFee } from "../src/views/format.js";
 import { esc } from "../src/views/html.js";
-import { LAUNCH_HEADLINE, launchPage } from "../src/views/launch/page.js";
-import { buildLaunchStory } from "../src/views/launch/story.js";
 import { emptyValues, orderPage, quotePage } from "../src/views/order.js";
 import { PRODUCT_PHOTOS } from "../src/views/storefront/photos.js";
 import { storefrontPage } from "../src/views/storefront.js";
@@ -178,46 +176,6 @@ describe("order page (/order)", () => {
   });
 });
 
-describe("AgentDoor landing (/launch)", () => {
-  it("leads with the exact headline and the first-run critical-gap number taken from the recorded session", () => {
-    const story = buildLaunchStory(session, launch.record, NOW);
-    const expected = liveRunFigures("First rehearsal run", runLive(session, 1, NOW)).gaps.open;
-    expect(story.first.gaps.open).toBe(expected);
-    const page = launchPage(story);
-    expect(page).toContain(`<h1 id="launch-h" class="ad-hero__title">${esc(LAUNCH_HEADLINE)}</h1>`);
-    expect(LAUNCH_HEADLINE).toBe("Don't just launch your business. Rehearse it before your first customer arrives.");
-    expect(page).toContain(`<strong class="figure__n">${expected}</strong>`);
-    expect(page).toContain(`<strong class="figure__n">${story.final.gaps.open}</strong>`);
-    for (const name of ["Describe", "Clarify", "Review business rules", "Rehearse", "Resolve", "Launch"]) expect(page).toContain(`<h3>${name}</h3>`);
-  });
-
-  it("is honest: a recorded real launch, the live launcher is coming next, and the CTAs go where they say", () => {
-    const page = launchPage(buildLaunchStory(session, launch.record, NOW));
-    expect(page).toContain("recorded real launch, made with live Claude");
-    expect(page).toContain("The interactive live launcher is coming next.");
-    expect(page).toContain('href="/try">Walk through the real launch session');
-    expect(page).toContain('href="/launch-report">See the launch report');
-    expect(page).toContain('rel="noopener">Source code</a>');
-    expect(page).not.toContain("/assets/bakery.css");
-    expect(page).not.toMatch(/\sstyle=/);
-  });
-
-  it("every gap card and correction is real session data, in plain words", () => {
-    const story = buildLaunchStory(session, launch.record, NOW);
-    expect(story.corrections).toHaveLength(session.gapFixes.length);
-    const page = launchPage(story);
-    for (const g of story.gaps) expect(page).toContain(esc(g.title));
-    for (const c of story.corrections) expect(page).toContain(esc(c.decision));
-  });
-
-  it("still renders the headline and links when the recorded session is missing, and says so", () => {
-    const page = launchPage(null);
-    expect(page).toContain(esc(LAUNCH_HEADLINE));
-    expect(page).toContain("not available on this server");
-    expect(page).toContain('href="/try"');
-  });
-});
-
 describe("routes", () => {
   let server: Server;
   let base = "";
@@ -241,23 +199,41 @@ describe("routes", () => {
   });
   afterAll(() => new Promise<void>((r) => server.close(() => r())));
 
-  it("GET /launch serves the AgentDoor page under the strict CSP, with no frame and no inline code", async () => {
+  it("GET /launch serves the workspace start page under the strict CSP, with no frame and no inline code", async () => {
     const res = await fetch(`${base}/launch`);
     expect(res.status).toBe(200);
     const csp = res.headers.get("content-security-policy")!;
     expect(csp).not.toContain("unsafe-inline");
     expect(csp).not.toContain("frame-src");
     const body = await res.text();
-    expect(body).toContain(esc(LAUNCH_HEADLINE));
+    expect(body).toContain("Workspace is closed"); // no access code is configured in this test app
     expect(body).not.toMatch(/<script(?![^>]*src=)/);
   });
 
   it("GET / is the bakery, and the bakery and AgentDoor stylesheets are served", async () => {
     const home = await (await fetch(`${base}/`)).text();
     expect(home).toContain("/assets/bakery.css");
-    for (const f of ["bakery.css", "agentdoor.css", "agentdoor-launch.css", "agentdoor-try.css", "photos/hero-chocolate-cake.jpg"]) {
+    for (const f of ["bakery.css", "agentdoor.css", "workspace.css", "workspace.js", "agentdoor-try.css", "photos/hero-chocolate-cake.jpg"]) {
       const res = await fetch(`${base}/assets/${f}`);
       expect(res.status, f).toBe(200);
     }
+  });
+});
+
+describe("launch report: four separate categories, computed", () => {
+  it("the first run's four categories are computed from the run and agree with its open-gap count", () => {
+    const first = liveRunFigures("First rehearsal run", runLive(session, 1, NOW));
+    expect(first.categories.engine).toBe(0);
+    expect(first.categories.approval).toBeGreaterThan(0);
+    // Different kinds of finding: only a test adds them, to prove none is dropped or counted twice.
+    const { policy, approval, scenario, engine } = first.categories;
+    expect(policy + approval + scenario + engine).toBe(first.gaps.open);
+  });
+
+  it("the report shows the four kinds side by side and never as one total", async () => {
+    const { launchReportPage } = await import("../src/views/report.js");
+    const page = launchReportPage(launch, "https://shop.test", { firstRun: liveRunFigures("First rehearsal run", runLive(session, 1, NOW)) });
+    for (const heading of ["Business-policy gaps", "Pending approvals", "Scenario mismatches", "Engine failures"]) expect(page).toContain(heading);
+    expect(page).not.toMatch(/failures prevented/i);
   });
 });

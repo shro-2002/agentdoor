@@ -1,0 +1,49 @@
+/* The draft-storefront preview: a persistent bar stuck to the top of the unchanged bakery page, and inert order links. */
+.pvbar {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 36px;
+  padding: 0 16px;
+  overflow: hidden;
+  background: #18181b;
+  color: #ececea;
+  font: 400 13px/1 "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  white-space: nowrap;
+}
+
+.is-preview .head {
+  top: 36px;
+}
+
+.pvbar__more {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 640px) {
+  .pvbar__more {
+    display: none;
+  }
+}
+
+.pvbar__tag {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #ececea;
+  color: #18181b;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.is-preview .is-off {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}

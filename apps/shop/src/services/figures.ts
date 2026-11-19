@@ -1,4 +1,4 @@
-import { requiredPaths, type BusinessPolicy, type LaunchRecord, type RuleProvenance } from "@agentdoor/core";
+import { countOpenByCategory, requiredPaths, type BusinessPolicy, type CategoryCounts, type GapCode, type LaunchRecord, type RuleProvenance } from "@agentdoor/core";
 
 /**
  * One definition per number the public pages quote, so /try and /launch-report can never disagree.
@@ -64,12 +64,14 @@ export interface RunFigures {
   checks: number;
   passed: number;
   gaps: ReturnType<typeof gapFigures>;
+  /** Open findings by kind. The four are different things and are never added into one figure. */
+  categories: CategoryCounts;
   basis: string;
 }
 
 interface LiveRunLike {
   version: number;
-  gaps: { severity: Severity; dismissed: boolean }[];
+  gaps: { code: GapCode; severity: Severity; dismissed: boolean }[];
   summary: { probes: number; scenarios: number; passed: number };
 }
 
@@ -81,6 +83,7 @@ export function liveRunFigures(label: RunLabel, run: LiveRunLike): RunFigures {
     checks: run.summary.probes + run.summary.scenarios,
     passed: run.summary.passed,
     gaps: gapFigures(rows),
+    categories: countOpenByCategory(run.gaps),
     basis: basisLive(run.version),
   };
 }
@@ -93,6 +96,7 @@ export function recordedRunFigures(record: LaunchRecord): RunFigures {
     checks: r.probes + r.scenarios,
     passed: r.passed,
     gaps: gapFigures(r.gapsFound),
+    categories: countOpenByCategory(r.gapsFound.map((g) => ({ code: g.code as GapCode, dismissed: g.fixedInVersion !== null }))),
     basis: basisRecorded(record.policyVersion),
   };
 }

@@ -40,6 +40,21 @@ export const PRODUCT_PHOTOS: Record<string, Photo> = {
   brownies: photo("brownies.jpg", 1200, 900, "A stack of fudgy chocolate-chip brownies on a plate, scattered with fresh raspberries."),
 };
 
+/**
+ * A product whose id is not one of the four above (a draft built from the owner's own words) gets the
+ * photo of its kind: the most specific word wins, and anything else shows the hero cake.
+ */
+export function productPhotoFor(item: { id: string; name: { en: string } }): Photo {
+  const known = PRODUCT_PHOTOS[item.id];
+  if (known) return known;
+  const words = `${item.id} ${item.name.en}`.toLowerCase();
+  if (/cookie|biscuit/.test(words)) return PRODUCT_PHOTOS["cookie-box"]!;
+  if (/brownie/.test(words)) return PRODUCT_PHOTOS.brownies!;
+  if (/vanilla|eggless/.test(words)) return PRODUCT_PHOTOS["eggless-vanilla-cake"]!;
+  if (/cake|chocolate/.test(words)) return PRODUCT_PHOTOS["chocolate-cake"]!;
+  return HERO_PHOTO;
+}
+
 const PHOTO_DIR = "/assets/photos";
 
 interface ImgOptions {

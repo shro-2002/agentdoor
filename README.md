@@ -114,7 +114,7 @@ Without both, the script exits before doing anything. Shop secrets are sent to t
 
 | Suite | Result on 19 Nov 2026 |
 |---|---|
-| Unit and integration | 582 passing |
+| Unit and integration | 583 passing (20 Nov 2026) |
 | End-to-end (Playwright) | 67 passing |
 | Accessibility (axe) | zero serious or critical violations on every workspace screen, desktop and mobile widths |
 | Concurrency C-CAP-1 | 20 concurrent orders against capacity, zero oversold in repeated runs |

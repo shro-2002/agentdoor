@@ -1,0 +1,185 @@
+1
+00:00:00,000 --> 00:00:02,775
+A beautiful website can bring customers to a small business.
+
+2
+00:00:02,775 --> 00:00:06,291
+But what happens when more orders arrive than the owner can handle?
+
+3
+00:00:08,833 --> 00:00:10,505
+Other tools build you a website.
+
+4
+00:00:10,505 --> 00:00:13,976
+AgentDoor prepares your business for its first difficult customer,
+
+5
+00:00:13,976 --> 00:00:16,496
+starting with a rehearsal of her busiest day.
+
+6
+00:00:16,496 --> 00:00:18,388
+Every refusal explained.
+
+7
+00:00:18,388 --> 00:00:20,836
+Oversold: 0.
+
+8
+00:00:21,633 --> 00:00:24,199
+Here's a fresh business, created live.
+
+9
+00:00:24,199 --> 00:00:27,751
+A baker in Bengaluru describes her shop in Hinglish.
+
+10
+00:00:27,751 --> 00:00:31,221
+Claude asks only what's missing, in her language.
+
+11
+00:00:32,033 --> 00:00:33,206
+Daily capacity?
+
+12
+00:00:33,206 --> 00:00:36,631
+She doesn't know yet, so it stays undecided, on purpose.
+
+13
+00:00:36,631 --> 00:00:39,810
+Claude turns her words into a draft business.
+
+14
+00:00:42,233 --> 00:00:43,998
+Every rule keeps her own words.
+
+15
+00:00:43,998 --> 00:00:47,966
+Anything she didn't say is labelled: suggested by AgentDoor.
+
+16
+00:00:49,033 --> 00:00:54,757
+Rehearse tests her rules against difficult
+customers and flags decisions only she can make.
+
+17
+00:00:54,757 --> 00:01:01,454
+Each case shows the money at stake, with the engine's
+breakdown: one thousand and eighty rupees for this rush order.
+
+18
+00:01:02,200 --> 00:01:05,625
+Now a simulated festival rush, before she sets a limit.
+
+19
+00:01:05,625 --> 00:01:09,723
+Her undecided capacity was filled in as 10 a day: 10 of 10,
+
+20
+00:01:09,723 --> 00:01:10,906
+booked.
+
+21
+00:01:11,300 --> 00:01:13,134
+She can really bake 6.
+
+22
+00:01:13,134 --> 00:01:16,140
+She sets it, and runs a fresh simulated rush.
+
+23
+00:01:18,890 --> 00:01:20,806
+Bookings stop at 6 of 6.
+
+24
+00:01:20,806 --> 00:01:24,951
+The rest are refused with reasons she understands: daily limit reached,
+
+25
+00:01:24,951 --> 00:01:27,807
+rush slots full, closed that day.
+
+26
+00:01:27,807 --> 00:01:31,543
+Oversold: 0, against her own limit.
+
+27
+00:01:31,933 --> 00:01:36,612
+Her approved products, prices and rules flow into her storefront preview.
+
+28
+00:01:36,612 --> 00:01:39,571
+A preview, not a published domain.
+
+29
+00:01:42,333 --> 00:01:46,965
+Meera's Kitchen, an illustrative bakery, is already live on GoDaddy.
+
+30
+00:01:46,965 --> 00:01:50,437
+Its badge: rehearsed before launch, 49 checks,
+
+31
+00:01:50,437 --> 00:01:52,294
+rules approved by the owner.
+
+32
+00:01:52,294 --> 00:01:57,401
+Shoppers can read every rule, verified by a signed policy fingerprint.
+
+33
+00:01:58,200 --> 00:02:02,438
+Now a real AI customer: Claude, with the AgentDoor connector.
+
+34
+00:02:02,438 --> 00:02:05,387
+It gets a signed quote: ₹800.
+
+35
+00:02:05,387 --> 00:02:08,243
+I ask it to change the price to ₹500.
+
+36
+00:02:08,243 --> 00:02:09,322
+It can't.
+
+37
+00:02:09,322 --> 00:02:12,933
+I confirm, and the order waits for the owner, in her dashboard.
+
+38
+00:02:12,933 --> 00:02:16,054
+The AI can't rewrite her prices or rules.
+
+39
+00:02:16,867 --> 00:02:20,733
+Under the hood: Claude understands, AgentDoor rehearses,
+
+40
+00:02:20,733 --> 00:02:26,271
+the owner approves, GoDaddy hosts, and humans and AI order.
+
+41
+00:02:26,271 --> 00:02:28,570
+No model sets prices.
+
+42
+00:02:28,570 --> 00:02:32,262
+Quotes are signed, capacity is reserved atomically in MySQL,
+
+43
+00:02:32,262 --> 00:02:37,753
+on GoDaddy Node.js hosting with an HTTPS domain and business email.
+
+44
+00:02:37,753 --> 00:02:41,362
+20 orders at once: 0 oversold.
+
+45
+00:02:42,167 --> 00:02:43,688
+Don't just launch a website.
+
+46
+00:02:43,688 --> 00:02:46,739
+Launch a business that's ready for its customers.

@@ -23,7 +23,7 @@ Judges: start at https://agentdoor.shop/launch, the live AgentDoor workspace (no
 - Two unseen live journeys, each ending in a preview (gaps / pending / mismatches / engine failures): English, Kolkata cakes, pickup only, 2 / 15 / 2 / 0; Hinglish, Delhi gift boxes, questions asked in Hinglish, 0 / 18 / 3 / 0.
 - Recorded Meera launch: first run 2 / 28 / 1 / 0, final 0 open. The two policy gaps were the omissions planted in the Hinglish description (no daily limit, no rule for unlisted areas); both were caught before launch.
 - Busy day, live on a new Kolkata bakery limited to 4 cakes a day: 2 of 50 orders accepted (₹3,800), the rest refused with reasons, oversold 0.
-- 582 unit and integration and 67 end-to-end tests pass; zero serious or critical accessibility issues; 20 concurrent orders oversell zero.
+- 583 unit and integration and 67 end-to-end tests pass; zero serious or critical accessibility issues; 20 concurrent orders oversell zero.
 
 **Spend controls.** $10 global runtime cap, $0.60 and 3 setup rounds per business, 2 scenario runs, 6 new businesses per network hourly. At a cap the workspace says so; free checks keep working.
 

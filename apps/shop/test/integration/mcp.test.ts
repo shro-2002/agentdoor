@@ -67,6 +67,14 @@ describe("MCP route (I-MCP-1..4)", () => {
     expect(r.structuredContent!.policyHash).toMatch(/^[0-9a-f]{64}$/);
   });
 
+  it("get_business_info also serializes the catalog in the text block for text-only clients", async () => {
+    const r = (await client.callTool({ name: "get_business_info", arguments: {} })) as ToolResult;
+    const text = r.content[0]!.text;
+    const json = JSON.parse(text.slice(text.indexOf("\n") + 1));
+    expect(json).toEqual(r.structuredContent);
+    expect(text).toContain('"id":"choco-cake"');
+  });
+
   it("I-MCP-2: get_quote -> place_order creates a channel=mcp order; replay is idempotent", async () => {
     const q = (await client.callTool({ name: "get_quote", arguments: quoteBody() })) as ToolResult;
     expect(q.isError).toBeFalsy();

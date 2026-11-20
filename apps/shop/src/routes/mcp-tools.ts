@@ -46,8 +46,12 @@ export interface ToolResult {
   structuredContent?: Record<string, unknown>;
 }
 
+/**
+ * The summary line plus the same data as JSON in the text block: some MCP clients (Claude.ai) read only
+ * the text content, and the MCP spec asks tools that return structured content to also serialize it there.
+ */
 const ok = (structured: Record<string, unknown>, text: string): ToolResult => ({
-  content: [{ type: "text", text }],
+  content: [{ type: "text", text: `${text}\n${JSON.stringify(structured)}` }],
   structuredContent: structured,
 });
 

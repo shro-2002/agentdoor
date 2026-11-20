@@ -12,7 +12,7 @@
 - Pages: `/launch` (workspace), `/launch/w/...` (your private draft), `/launch/p/...` (read-only preview link), `/` storefront, `/order`, `/contact`, `/mcp`
 - Technical documentation of the first recorded launch (evidence only, not part of the product flow): `/launch-report` and `/try`
 - Contact: hello@agentdoor.shop
-- Demo video: link added at submission
+- Demo video (2:50): https://youtu.be/ES2aL0BVhkI
 
 The bundled shop, "Meera's Kitchen" in Pune, is an illustrative persona based on common home-bakery practices. It is not a real customer.
 

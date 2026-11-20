@@ -20,9 +20,9 @@ test.describe("E2E-5 the public replay works end to end with JavaScript disabled
     await expect(page.locator(".trynav")).toContainText("AgentDoor");
     await expect(page.locator("footer").getByRole("link", { name: "Source code" })).toBeVisible();
 
-    // The video id is unset here: a clear note, never a broken iframe.
-    await expect(page.locator("#demo")).toContainText("demo video link is added at submission");
-    await expect(page.locator("iframe")).toHaveCount(0);
+    // The published demo film is embedded (privacy-enhanced domain), with a plain YouTube link as fallback.
+    await expect(page.locator("#demo iframe")).toHaveAttribute("src", "https://www.youtube-nocookie.com/embed/ES2aL0BVhkI");
+    await expect(page.locator("#demo").getByRole("link", { name: "Watch it on YouTube" })).toHaveAttribute("href", "https://www.youtube.com/watch?v=ES2aL0BVhkI");
 
     // The legend lists all three badges.
     expect(await badgesOn(page)).toEqual(expect.arrayContaining(Object.values(BADGES)));

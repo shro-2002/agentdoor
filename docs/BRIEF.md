@@ -1,4 +1,4 @@
-Judges: start at https://agentdoor.shop/launch, the live AgentDoor workspace (no access code). The approved storefront is https://agentdoor.shop and the MCP endpoint is https://agentdoor.shop/mcp.
+Judges: start at https://agentdoor.shop/launch, the live AgentDoor workspace (no access code). The approved storefront is https://agentdoor.shop and the MCP endpoint is https://agentdoor.shop/mcp. Demo video (2:50): https://youtu.be/ES2aL0BVhkI.
 
 **AgentDoor: rehearse your business against tough customers before your first order.** Other tools build you a website. AgentDoor makes sure the business behind it survives its first customers: its rules are rehearsed, enforced in code and signed before anyone can order.
 

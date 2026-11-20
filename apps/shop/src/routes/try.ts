@@ -27,12 +27,15 @@ const str = (v: unknown, max: number): string => (typeof v === "string" ? v.slic
  * engine live. It never calls Claude, never opens a database connection, never writes a file.
  * (This module deliberately takes no `pool`.)
  */
+/** The published demo film (https://youtu.be/ES2aL0BVhkI). Public, so a constant; `DEMO_VIDEO_ID` still overrides it. */
+export const DEMO_VIDEO_ID = "ES2aL0BVhkI";
+
 export function tryRouter(ctx: ServiceContext, limiters: Limiters, opts: TryOptions = {}): Router {
   const router = Router();
   const load = sessionLoader(opts.bundleDir ?? process.env.BUNDLE_DIR ?? join(process.cwd(), "bundle"));
   const sameOrigin = requireSameOrigin(ctx.config);
   router.use("/try", limiters.try);
-  const videoId = (): string | null => videoIdFrom(process.env.DEMO_VIDEO_ID);
+  const videoId = (): string | null => videoIdFrom(process.env.DEMO_VIDEO_ID ?? DEMO_VIDEO_ID);
   const send = (res: Response, markup: string): void => void res.set("Cache-Control", "no-store").type("html").send(markup);
 
   const unavailable = (res: Response): void => void res.status(200).set("Cache-Control", "no-store").type("html").send(introPage(null, videoId()));

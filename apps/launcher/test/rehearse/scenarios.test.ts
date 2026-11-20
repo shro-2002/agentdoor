@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { istDateOf } from "@agentdoor/core";
-import { resolveScenarios, runScenarios } from "../../src/flows/scenarios.js";
+import { buildScenariosUser, calendarLines, resolveScenarios, runScenarios } from "../../src/flows/scenarios.js";
 import { bakeryPolicy, pinClock, rehearse, scenario, setup } from "./helpers.js";
 
 beforeEach(() => pinClock());
@@ -98,5 +98,23 @@ describe("scenarios call (Claude, effort low)", () => {
     const run = (await rehearse(broken, sessionId)).result!;
     expect(run.summary.probesFailed).toBeGreaterThan(0);
     expect(run.gaps.some((g) => g.code === "ENGINE_PROBE_FAILED")).toBe(true);
+  });
+});
+
+describe("scenario calendar (weekday-aware daysAhead)", () => {
+  it("maps every daysAhead to its weekday and marks closed days, so a 'Sunday' customer lands on Sunday", () => {
+    const policy = bakeryPolicy();
+    const lines = calendarLines("2026-11-20", policy);
+    expect(lines).toContain("daysAhead 0 = Friday 2026-11-20");
+    expect(lines).toContain("daysAhead 2 = Sunday 2026-11-22");
+    expect(lines).toContain("daysAhead 3 = Monday 2026-11-23 (the shop is closed)");
+    const resolved = resolveScenarios([scenario("sun", { request: { ...scenario("sun").request, daysAhead: 2 } })], "2026-11-20");
+    expect(resolved.valid[0]!.request.date).toBe("2026-11-22");
+  });
+
+  it("the scenario writer's message starts with today's calendar when today is known", () => {
+    const user = buildScenariosUser({ turns: ["I bake cakes."] }, bakeryPolicy(), "2026-11-20");
+    expect(user.startsWith("Calendar (IST).")).toBe(true);
+    expect(buildScenariosUser({ turns: ["I bake cakes."] }, bakeryPolicy())).not.toContain("Calendar (IST)");
   });
 });

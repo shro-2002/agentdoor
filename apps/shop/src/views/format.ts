@@ -63,17 +63,22 @@ export const DIETARY: Record<string, { label: string; caution: boolean }> = {
  * The first date the shop could accept a one-unit pickup order, found with the same engine that
  * prices real orders (no second set of date rules to drift). Null when nothing opens in range.
  */
-export function earliestDate(policy: BusinessPolicy, nowMs: number): string | null {
+export function earliestDate(policy: BusinessPolicy, nowMs: number, opts: { standardOnly?: boolean } = {}): string | null {
   const first = policy.catalog[0];
   if (!first) return null;
   const today = istDateOf(nowMs);
   for (let ahead = 0; ahead <= policy.schedule.maxAdvanceDays; ahead++) {
     const date = addDays(today, ahead);
     const request = { lines: [{ itemId: first.id, qty: first.minQty, optionIds: [] }], fulfilment: { kind: "pickup" as const }, date };
-    if (evaluate(policy, request, nowMs).outcome === "QUOTED") return date;
+    const out = evaluate(policy, request, nowMs);
+    if (out.outcome === "QUOTED" && !(opts.standardOnly && out.isRush)) return date;
   }
   return null;
 }
+
+/** The first day with normal notice and no rush charge: the form's default and the day its hint names. */
+export const earliestStandardDate = (policy: BusinessPolicy, nowMs: number): string | null =>
+  earliestDate(policy, nowMs, { standardOnly: true });
 
 export const listWords = (items: string[]): string =>
   items.length <= 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;

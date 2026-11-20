@@ -9,7 +9,7 @@ import type { ServiceContext } from "../services/context.js";
 import { placeOrder, type OrderErrorCode } from "../services/order-service.js";
 import { getQuote } from "../services/quote-service.js";
 import { RestOrderSchema } from "../services/schemas.js";
-import { earliestDate } from "../views/format.js";
+import { earliestStandardDate } from "../views/format.js";
 import {
   OTHER_AREA,
   emptyValues,
@@ -138,7 +138,7 @@ export function orderRouter(ctx: ServiceContext, limiters: Limiters): Router {
   router.get("/order", (req, res) => {
     const { launch } = ctx;
     const values = launch.launched ? parseValues(req.query as Source, launch.policy) : emptyValues();
-    const earliest = launch.launched ? earliestDate(launch.policy, ctx.now()) : null;
+    const earliest = launch.launched ? earliestStandardDate(launch.policy, ctx.now()) : null;
     noStore(res);
     res.type("html").send(orderPage({ launch, values, earliest, nowMs: ctx.now() }));
   });
@@ -149,7 +149,7 @@ export function orderRouter(ctx: ServiceContext, limiters: Limiters): Router {
     const { policy } = launch;
     const values = parseValues(req.body as Source, policy);
     const refuse = (problems: Problem[], request?: QuoteRequest, status = 422): void => {
-      const earliest = request ? firstWorkingDate(policy, request, ctx.now()) : earliestDate(policy, ctx.now());
+      const earliest = request ? firstWorkingDate(policy, request, ctx.now()) : earliestStandardDate(policy, ctx.now());
       noStore(res);
       res.status(status).type("html").send(orderPage({ launch, values, problems, earliest, nowMs: ctx.now() }));
     };

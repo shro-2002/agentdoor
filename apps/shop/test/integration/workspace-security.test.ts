@@ -4,6 +4,7 @@ import { mysqlSpendGuard, BudgetError } from "../../src/workspace/budget.js";
 import { createWorkspaceClient } from "../../src/workspace/claude.js";
 import { LIMITS, loadWorkspaceConfig } from "../../src/workspace/config.js";
 import { createDraft, getDraft, updateState } from "../../src/workspace/store.js";
+import { mentionsBakedGoods } from "../../src/workspace/scope.js";
 import { emptyState } from "../../src/workspace/state.js";
 import { BENGALURU, DELHI } from "../support/fake-claude.js";
 import { CODE, clearEverything, settle, startWorkspaceShop, type WsShop } from "./workspace-helpers.js";
@@ -67,6 +68,35 @@ describe("access", () => {
     expect((await b.post("/launch", { description: "x".repeat(LIMITS.maxDescriptionChars + 1), code: CODE })).status).toBe(400);
     expect((await b.post("/launch", { description: "short", code: CODE })).status).toBe(400);
   });
+
+  it("a business that is not a bakery is turned away before any draft or Claude call", async () => {
+    shop = await startWorkspaceShop();
+    const b = shop.browser();
+    const tailor = "I am a tailor in Jaipur. I stitch blouses for Rs 450 a piece and do saree fall for Rs 150. Closed Tuesday.";
+    const res = await b.post("/launch", { description: tailor, code: CODE });
+    expect(res.status).toBe(422);
+    expect(res.text).toContain("early access is for home bakeries");
+    expect(res.text).toContain("I am a tailor in Jaipur");
+    expect(shop.fake.calls).toHaveLength(0);
+    expect((await b.post("/launch", { description: BENGALURU, code: CODE })).status).toBe(303);
+    await shop.jobs.idle();
+  });
+});
+
+describe("bakery scope (mentionsBakedGoods)", () => {
+  it.each([
+    "Main ghar par cakes aur cupcakes banati hoon, Pune mein.",
+    "मैं लखनऊ में घर से केक और कुकीज़ बनाती हूँ।",
+    "Fresh sourdough loaves and pav buns from my kitchen in Goa.",
+    "I bake apple pie and lemon tarts to order.",
+    "Home baker in Kochi, plum cake for Christmas.",
+  ])("lets a bakery through: %s", (text) => expect(mentionsBakedGoods(text)).toBe(true));
+
+  it.each([
+    "I am a tailor. Blouse stitching ₹450 per piece, start date flexible.",
+    "Beauty salon in Indore: threading ₹50, facial ₹800.",
+    "Maths tuition for class 10, ₹2000 a month.",
+  ])("turns away another kind of business: %s", (text) => expect(mentionsBakedGoods(text)).toBe(false));
 });
 
 describe("isolation", () => {

@@ -31,10 +31,15 @@ const FIELD_OF: Partial<Record<Reason["code"], Field>> = {
 };
 
 /** The first date on which the same basket would be quoted, so a refusal can say what works. */
+/**
+ * The first date after the one she asked for that the engine would quote. Searching from today could
+ * name a date earlier than her choice (a same-day rush slot before a notice gap), which reads as a contradiction.
+ */
 export function firstWorkingDate(policy: BusinessPolicy, request: QuoteRequest, nowMs: number): string | null {
   const today = istDateOf(nowMs);
-  for (let ahead = 0; ahead <= policy.schedule.maxAdvanceDays; ahead++) {
-    const date = addDays(today, ahead);
+  const last = addDays(today, policy.schedule.maxAdvanceDays);
+  let date = request.date >= today ? addDays(request.date, 1) : today;
+  for (; date <= last; date = addDays(date, 1)) {
     if (evaluate(policy, { ...request, date }, nowMs).outcome === "QUOTED") return date;
   }
   return null;

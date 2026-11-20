@@ -35,12 +35,12 @@ function steps(ctx: ViewCtx): Step[] {
       detail: !state.policy ? "After setup" : !ready.hasRun ? "Not run yet" : ready.canPublish ? "All clear" : ready.blockers[0] ?? "Open items",
       state: ready.canPublish ? "done" : state.policy ? "todo" : "wait",
     },
-    { label: "Storefront", icon: "storefront", href: `${base}/storefront`, detail: ctx.previewPath ? "Preview ready" : "Preview and publish", state: ctx.previewPath ? "done" : "wait" },
+    { label: "Storefront", icon: "storefront", href: `${base}/storefront`, detail: ctx.previewPath ? "Preview ready" : "Preview your storefront", state: ctx.previewPath ? "done" : "wait" },
   ];
 }
 
 function stepList(ctx: ViewCtx): SafeHtml {
-  return html`<section class="journey" aria-labelledby="steps-h"><h2 id="steps-h" class="group__title">Your path to launch</h2>
+  return html`<section class="journey" aria-labelledby="steps-h"><h2 id="steps-h" class="group__title">Your path to a ready shop</h2>
     <ol class="steps">${steps(ctx).map((s) => html`<li class="step step--${s.state}"><a href="${s.href}"><span class="step__icon">${s.state === "done" ? icon("check") : icon(s.icon)}</span><span class="step__text"><span class="step__label">${s.label}</span><span class="step__detail">${s.detail}</span></span>${icon("arrow")}${s.state === "done" ? html`<span class="sr-only">Done</span>` : ""}</a></li>`)}</ol>
   </section>`;
 }

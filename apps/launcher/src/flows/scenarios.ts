@@ -8,6 +8,7 @@ import {
   evaluate,
   requiredPaths,
   sha256Hex,
+  weekdayOf,
   type BusinessPolicy,
   type EngineOutcome,
   type Gap,
@@ -15,6 +16,7 @@ import {
 } from "@agentdoor/core";
 import type { z } from "zod";
 import type { Effort } from "../claude/client.js";
+import { todayIst } from "../claude/clock.js";
 import { scenariosSystemPrompt } from "../prompts/load.js";
 import type { Session } from "../store/fsStore.js";
 import { COMPILE_MODEL, type Deps } from "./compile.js";
@@ -162,9 +164,27 @@ function nameablePaths(policy: BusinessPolicy): string[] {
   return [...requiredPaths(policy), ...rush, ...extra];
 }
 
-export function buildScenariosUser(session: Pick<Session, "turns">, policy: BusinessPolicy): string {
+const CALENDAR_DAYS = 10;
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+/**
+ * `daysAhead` counts from today, but the model does not know today's weekday. Without this table a
+ * "Sunday" or "day after tomorrow" customer lands on the wrong weekday and shows up as a false mismatch.
+ */
+export function calendarLines(today: string, policy: BusinessPolicy): string[] {
+  const closed = new Set(policy.schedule.closedWeekdays);
+  const days = Array.from({ length: CALENDAR_DAYS }, (_, n) => {
+    const date = addDays(today, n);
+    const day = weekdayOf(date);
+    return `daysAhead ${n} = ${DAY_NAMES[day]} ${date}${closed.has(day) ? " (the shop is closed)" : ""}`;
+  });
+  return ["Calendar (IST). Pick daysAhead from this table so the weekday matches what the customer asks for:", ...days, ""];
+}
+
+export function buildScenariosUser(session: Pick<Session, "turns">, policy: BusinessPolicy, today?: string): string {
   const words = session.turns.join("\n\n").slice(0, MAX_OWNER_WORDS_CHARS);
   return [
+    ...(today ? calendarLines(today, policy) : []),
     "Policy summary (JSON):",
     JSON.stringify(policyBrief(policy)),
     "",
@@ -206,7 +226,7 @@ export async function loadScenarios(deps: Deps, session: Session, policy: Busine
     model: SCENARIO_MODEL,
     effort: SCENARIO_EFFORT,
     system: scenariosSystemPrompt(),
-    user: buildScenariosUser(session, policy),
+    user: buildScenariosUser(session, policy, todayIst()),
     wireSchema: ScenariosWireSchema,
     maxTokens: SCENARIO_MAX_TOKENS,
     sessionId: session.id,

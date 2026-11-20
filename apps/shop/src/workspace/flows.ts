@@ -115,7 +115,7 @@ export async function generateScenarios(client: ClaudeClient, draftId: string, s
     model: SCENARIO_MODEL,
     effort: "low",
     system,
-    user: `The business is in ${policy.business.city}.\n\n${buildScenariosUser({ turns: state.turns }, policy)}`,
+    user: `The business is in ${policy.business.city}.\n\n${buildScenariosUser({ turns: state.turns }, policy, istDateOf(nowMs))}`,
     wireSchema: ScenariosWireSchema,
     maxTokens: SCENARIO_MAX_TOKENS,
     sessionId: draftId,

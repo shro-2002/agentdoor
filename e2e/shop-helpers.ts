@@ -49,9 +49,11 @@ const ORDERS_PER_DAY = 2;
 /**
  * A date a week or more after the earliest one, spread over several weeks: the earliest day is a rush
  * day with a tiny rush cap, and one day only has room for a few cakes, so tests must not pile onto it.
+ * Counted from the picker's `min` (the first day the engine quotes), not its default value, which is
+ * the first standard day and can sit several days later.
  */
 async function laterDate(page: Page): Promise<string> {
-  const earliest = await page.locator("#date").inputValue();
+  const earliest = (await page.locator("#date").getAttribute("min")) ?? (await page.locator("#date").inputValue());
   const weeks = 1 + Math.floor(orderSeq++ / ORDERS_PER_DAY);
   const d = new Date(`${earliest}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + DAYS_PER_WEEK * weeks);

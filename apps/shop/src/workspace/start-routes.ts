@@ -7,6 +7,7 @@ import { COOKIE_MAX_AGE_MS, WORKSPACE_COOKIE, newId, signDraftCookie } from "./c
 import { HOUR_MS, HTTP, type RouteKit } from "./route-kit.js";
 import { emptyState } from "./state.js";
 import { createDraft, getDraft, hit, pruneHits } from "./store.js";
+import { OUT_OF_SCOPE_MESSAGE, mentionsBakedGoods } from "./scope.js";
 import { exampleText } from "./views/examples.js";
 import { accessStepPage, businessesPage, startPage } from "./views/start.js";
 import type { Tone } from "./views/kit.js";
@@ -49,6 +50,7 @@ export function registerStart(kit: RouteKit): void {
     const parsed = DescriptionSchema.safeParse(raw);
     if (!parsed.success) return send(res, landing(req, { tone: "bad", text: parsed.error.issues[0]?.message ?? "Please check what you wrote." }, raw.slice(0, LIMITS.maxDescriptionChars)), HTTP.badRequest);
     const description = parsed.data;
+    if (!mentionsBakedGoods(description)) return send(res, landing(req, { tone: "bad", text: OUT_OF_SCOPE_MESSAGE }, description), HTTP.unprocessable);
     const ip = kit.ipKey(req, "ip");
     let grant = false;
     if (!early(req)) {

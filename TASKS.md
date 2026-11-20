@@ -1,5 +1,7 @@
 # TASKS — ordered tracker
 
+> Historical build plan, frozen. The Status column was not maintained here; every task below was completed, cut or merged, and the record of what shipped is in `STATUS.md`.
+
 Details: `planning/07_IMPLEMENTATION_TASKS.md`. Status: `todo` · `doing` · `done` · `blocked` · `cut`. Updated after R0 (CONDITIONAL GO, P0 fixes applied).
 
 | ID | Task | Lane | Deps | Model / effort | Exp $ | Cap $ | Time | Target window (IST) | Status |

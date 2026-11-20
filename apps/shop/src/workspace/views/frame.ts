@@ -72,7 +72,7 @@ function nav(ctx: ViewCtx, active: Tab): SafeHtml {
 function readyMeter(ctx: ViewCtx): SafeHtml {
   const flags = TABS.slice(1).map((t) => stepsDone(ctx)[t.key]);
   const n = flags.filter(Boolean).length;
-  const label = ctx.ready.canPublish ? "Ready to launch" : n === 0 ? "Just getting started" : `${n} of ${flags.length} steps done`;
+  const label = ctx.ready.canPublish ? "Ready: rehearsal passed" : n === 0 ? "Just getting started" : `${n} of ${flags.length} steps done`;
   return html`<div class="rail__ready${ctx.ready.canPublish ? " is-ready" : ""}"><p class="rail__ready-label">${label}</p><div class="segs" aria-hidden="true">${flags.map((on) => html`<span class="segs__s${on ? " is-on" : ""}"></span>`)}</div></div>`;
 }
 

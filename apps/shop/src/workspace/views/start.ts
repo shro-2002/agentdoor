@@ -25,7 +25,7 @@ export interface StartOptions {
 const STEPS: { icon: IconName; name: string; line: string }[] = [
   { icon: "build", name: "Build", line: "Your words become rules" },
   { icon: "rehearse", name: "Rehearse", line: "Tough customers test them" },
-  { icon: "launch", name: "Launch", line: "Share your storefront" },
+  { icon: "launch", name: "Preview", line: "See and share your storefront" },
 ];
 
 const pills = (): SafeHtml =>
@@ -37,7 +37,7 @@ const flow = (): SafeHtml =>
 function composer(o: StartOptions): SafeHtml {
   return html`<form method="post" action="/launch" class="composer" data-composer data-access="${o.earlyAccess ? "ok" : "needed"}">
     <label class="sr-only" for="description">Describe your business</label>
-    <textarea id="description" class="composer__input" name="description" rows="5" maxlength="${LIMITS.maxDescriptionChars}" required placeholder="Tell me about your business: what you sell, where, and how you work.">${o.description ?? ""}</textarea>
+    <textarea id="description" class="composer__input" name="description" rows="5" maxlength="${LIMITS.maxDescriptionChars}" required placeholder="Tell me about your bakery: what you bake, your prices, where you sell, and how you take orders.">${o.description ?? ""}</textarea>
     <div class="composer__bar">
       <p class="composer__meta"><span>English, Hindi or Hinglish</span><span class="count" data-count="${LIMITS.maxDescriptionChars}" aria-hidden="true"></span></p>
       <button class="btn btn--primary btn--lg" type="submit"><span class="btn__label">Build my business</span>${icon("arrow")}<kbd class="kbd" aria-hidden="true" data-shortcut>Ctrl ↵</kbd></button>
@@ -52,9 +52,9 @@ export function startPage(o: StartOptions): string {
     return landShell({ title: CLOSED_HEADING, hasDrafts: false, main: closed });
   }
   const main = html`<section class="hero">
-      <p class="hero__tag">${icon("sparkle")}Early access</p>
-      <h1 class="hero__title">Turn the business in your head into a shop that's ready for its first customer.</h1>
-      <p class="hero__lede">Describe it in your own words. AgentDoor builds the rules, rehearses tough customers, and launches your storefront.</p>
+      <p class="hero__tag">${icon("sparkle")}Early access · home bakeries</p>
+      <h1 class="hero__title">Turn the bakery in your head into a shop that's ready for its first customer.</h1>
+      <p class="hero__lede">Describe your home bakery in your own words. AgentDoor builds the rules, rehearses tough customers and a festival rush, and previews your storefront.</p>
     </section>
     ${o.flash ? notice(o.flash.tone, o.flash.text) : ""}
     ${composer(o)}

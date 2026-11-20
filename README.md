@@ -7,7 +7,7 @@
 - **Rehearsed badge and /how-we-work:** the live shop shows its rehearsal and links to its rules in plain words with the signed policy fingerprint (also in `/.well-known/agentdoor.json`).
 
 - Live: https://agentdoor.shop (also www)
-- Judge entry point: https://agentdoor.shop/launch, the live AgentDoor workspace. Anyone can use it, no access code. Describe your own bakery (English, Hindi or Hinglish), answer Claude's questions, edit products and rules, run the rehearsal, fix issues in place, rerun the free checks and open a preview of your storefront.
+- Judge entry point: https://agentdoor.shop/launch, the live AgentDoor workspace. Anyone can use it, no access code. Describe your own home bakery (English, Hindi or Hinglish), answer Claude's questions, edit products and rules, run the rehearsal and the festival-rush simulation, fix issues in place, rerun the free checks and open a private preview of your storefront. Early access covers home bakeries only: a description that names no baked goods is turned away before any Claude call. Publishing a preview to a live domain is not self-serve (see Publishing).
 - Approved storefront: https://agentdoor.shop (Meera's Kitchen, illustrative persona); ordering at https://agentdoor.shop/order; MCP endpoint https://agentdoor.shop/mcp
 - Pages: `/launch` (workspace), `/launch/w/...` (your private draft), `/launch/p/...` (read-only preview link), `/` storefront, `/order`, `/contact`, `/mcp`
 - Technical documentation of the first recorded launch (evidence only, not part of the product flow): `/launch-report` and `/try`
@@ -112,9 +112,9 @@ Without both, the script exits before doing anything. Shop secrets are sent to t
 
 ## Testing
 
-| Suite | Result on 19 Nov 2026 |
+| Suite | Result on 20 Nov 2026 |
 |---|---|
-| Unit and integration | 583 passing (20 Nov 2026) |
+| Unit and integration | 608 passing |
 | End-to-end (Playwright) | 67 passing |
 | Accessibility (axe) | zero serious or critical violations on every workspace screen, desktop and mobile widths |
 | Concurrency C-CAP-1 | 20 concurrent orders against capacity, zero oversold in repeated runs |
@@ -139,16 +139,17 @@ Claude is used in the workspace and the local launcher only: the compiler (polic
 ## Known limitations
 
 - The demo bakery is an illustrative persona; storefront photos are Pexels-licensed and illustrative (`apps/shop/public/photos/CREDITS.md`).
-- The workspace covers the home-bakery vertical.
+- The workspace covers the home-bakery vertical only. Descriptions that name no baked goods are refused up front, because the storefront copy and photos are bakery-specific.
 - Publishing from the workspace to a domain is owner-only; others get a preview.
 - Claude's compile occasionally needs one automatic repair attempt; a failed job is retryable.
 - No online payment collection.
 - `/try` replays a recorded session; only the blocks badged LIVE run when the page loads.
 - Unpaid orders hold capacity until the owner declines them.
 - `schedule.dailyCutoff` is stored but not enforced by the engine.
+- A numeric rule is shown as the owner's words only when her quoted words contain a number; an answer such as "pata nahi" keeps the AgentDoor default, labelled as a suggestion, and the rehearsal flags it as a decision.
 - Delivery area names must match the published spelling or an alias the owner listed. A variant spelling such as "Hinjawadi" for "Hinjewadi" is refused with `AREA_NOT_SERVED`, which is the safe behaviour.
-- The Claude-written scenarios do not always line up with weekdays (for example a case aimed at a Monday), which produces scenario gaps that a person has to judge.
-- The Hindi interface covers headings and main actions only.
+- The scenario writer is given a weekday calendar with closed days, but it can still misjudge a case; scenario mismatches are labelled for the owner to judge, never auto-fixed. Scenarios are written once per draft, so a rehearsal re-run on a later day shifts their dates.
+- The interface text is English. Claude reads Hindi and Hinglish and asks its questions in the owner's language; rules quote her own words in her script. The local launcher has Hindi headings and main actions; the deployed workspace does not.
 
 ## Repository layout
 

@@ -14,7 +14,7 @@ const OUT = path.resolve("docs/screens");
 const DESKTOP = { width: 1440, height: 900 };
 const PHONE = { width: 390, height: 844 };
 const WORKING_TIMEOUT = 45_000;
-const HEADING = "Turn the business in your head into a shop that's ready for its first customer.";
+const HEADING = "Turn the bakery in your head into a shop that's ready for its first customer.";
 
 test.use({ reducedMotion: "reduce" });
 

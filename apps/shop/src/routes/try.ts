@@ -8,7 +8,7 @@ import type { ServiceContext } from "../services/context.js";
 import { liveRunFigures, recordedRunFigures } from "../services/figures.js";
 import { firstProblemVersion, gateChecks, runLive } from "../services/try-live.js";
 import { sessionLoader, type TrySession } from "../services/try-session.js";
-import { earliestDate } from "../views/format.js";
+import { earliestStandardDate } from "../views/format.js";
 import { OTHER_AREA, firstWorkingDate, problemsFor } from "../views/order.js";
 import { describePage, introPage, launchPage, rehearsePage, rulesPage, videoIdFrom, type QuoteTry } from "../views/try.js";
 
@@ -71,7 +71,7 @@ export function tryRouter(ctx: ServiceContext, limiters: Limiters, opts: TryOpti
         run: runs[version - 1]!,
         latest: runs[last - 1]!,
         tabs: runs.map((r) => ({ version: r.version, criticalOpen: r.summary.criticalOpen })),
-        earliest: earliestDate(quotePolicy, nowMs),
+        earliest: earliestStandardDate(quotePolicy, nowMs),
         quotePolicy,
         runs: [
           liveRunFigures("First rehearsal run", runs[0]!),

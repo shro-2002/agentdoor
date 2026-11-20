@@ -50,7 +50,7 @@ function whenFieldset(policy: BusinessPolicy, v: OrderFormValues, ps: Problem[],
     <label class="label" for="date">Date</label>
     <input class="input date-input" id="date" name="date" type="date" required ${min ? html`min="${min}"` : ""} max="${max}" value="${v.date || earliest || ""}"
       aria-describedby="date-hint${bad ? ` ${errId("date")}` : ""}" ${bad ? raw('aria-invalid="true"') : ""}>
-    <p class="hint" id="date-hint">${earliest ? `The earliest day is ${shortDate(earliest)}. ` : ""}${closed.length > 0 ? `Closed on ${listWords(closed)}. ` : ""}Order up to ${policy.schedule.maxAdvanceDays} days ahead.</p>
+    <p class="hint" id="date-hint">${earliest ? `The earliest day is ${shortDate(earliest)}. ` : ""}${earliest && min && min < earliest ? "Sooner dates may be possible with a rush charge. " : ""}${closed.length > 0 ? `Closed on ${listWords(closed)}. ` : ""}Order up to ${policy.schedule.maxAdvanceDays} days ahead.</p>
     ${fieldErrors(ps, "date")}
   </fieldset>`;
 }

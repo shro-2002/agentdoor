@@ -3,6 +3,7 @@
 Keep this under ~150 lines. Newest entries on top within each section. Each task appends ≤10 lines.
 
 ## Now
+- 2026-11-20 (release hardening, from the final audit; NOT deployed yet): (1) numeric rules quoted from numberless words ("पता नहीं") become AgentDoor defaults (`demoteNumberlessQuotes`, compile.ts); (2) refused order dates suggest the first working date after the chosen one, and /order defaults to the first standard (non-rush) day (`firstWorkingDate`, `earliestStandardDate`); (3) /launch is home-bakery-only: descriptions naming no baked goods get 422 before any draft or Claude call (`workspace/scope.ts`); (4) scenario writer gets a weekday calendar with closed days; (5) workspace copy says preview/rehearsal, not launch; README/BRIEF/TASKS reconciled. Tests: see README Testing. Open: demo video URL, deploy, production budget headroom.
 - Phase: **SUBMISSION PREPARATION** (19 Nov 2026). The real Hinglish launch bundle (Meera's Kitchen, illustrative persona) is live on https://agentdoor.shop and the shop UI is styled.
 - Remaining: demo video, GitHub repository, submission.
 - Deadline: the public challenge page lists the submission time as 20 Nov 2026, 11:59 PM IST. Aim to submit well before it.

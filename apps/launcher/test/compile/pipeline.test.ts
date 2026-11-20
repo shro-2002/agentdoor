@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { BusinessPolicySchema, requiredPaths } from "@agentdoor/core";
-import { buildCompileResult, compileSession, isVerbatim } from "../../src/flows/compile.js";
+import { buildCompileResult, compileSession, isVerbatim, quoteStatesANumber } from "../../src/flows/compile.js";
 import { apiText, liveClient, newStore, wireFromPolicy } from "./helpers.js";
 
 function built(mutate?: (w: ReturnType<typeof wireFromPolicy>["wire"]) => void, transcriptExtra = "") {
@@ -85,6 +85,50 @@ describe("U-CMP-5 verbatim check (hallucination guard)", () => {
       quote: "I can do fifteen a day",
       turn: 1,
     });
+  });
+});
+
+describe("numeric rules need a number in the owner's words (provenance honesty)", () => {
+  const capacityQuoted = (quote: string) => {
+    const { wire } = wireFromPolicy();
+    const e = wire.evidence.find((x) => x.path === "capacity.unitsPerDay")!;
+    e.quote = quote;
+    e.confidence = "high";
+    const out = buildCompileResult(wire, [`Q: Ek din mein kitne?\nA: ${quote}`]);
+    if (!out.ok) throw new Error(out.issues.join(";"));
+    return out.value;
+  };
+
+  it.each(["पता नहीं", "pata nahi", "I don't know yet"])(
+    "a numberless answer (%s) is an AgentDoor default, not something she said, and is flagged missing",
+    (quote) => {
+      const r = capacityQuoted(quote);
+      expect(r.policy.provenance["capacity.unitsPerDay"]).toMatchObject({
+        source: { kind: "owner_edit", note: "AgentDoor default — confirm" },
+        confidence: "low",
+        status: "proposed",
+      });
+      expect(r.missing.some((m) => m.path === "capacity.unitsPerDay")).toBe(true);
+    },
+  );
+
+  it.each(["12 cakes a day", "रोज़ १२ केक", "das cake roz", "बारह केक", "about fifteen"])(
+    "a quote that states a number (%s) stays the owner's words",
+    (quote) => {
+      const r = capacityQuoted(quote);
+      expect(r.policy.provenance["capacity.unitsPerDay"]!.source).toMatchObject({ kind: "transcript", quote });
+    },
+  );
+
+  it("non-numeric rules keep a numberless quote (closed days)", () => {
+    const quote = "Monday ko band rehta hai";
+    expect(quoteStatesANumber(quote)).toBe(false);
+    const { wire } = wireFromPolicy();
+    wire.evidence = wire.evidence.filter((e) => e.path !== "schedule.closedWeekdays");
+    wire.evidence.push({ path: "schedule.closedWeekdays", quote, turn: 0, readback: "Closed Monday", confidence: "high" });
+    const out = buildCompileResult(wire, [quote]);
+    if (!out.ok) throw new Error(out.issues.join(";"));
+    expect(out.value.policy.provenance["schedule.closedWeekdays"]!.source).toMatchObject({ kind: "transcript", quote });
   });
 });
 

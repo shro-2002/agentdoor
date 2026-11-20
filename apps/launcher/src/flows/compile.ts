@@ -114,6 +114,42 @@ function mapEvidence(wire: CompileResultWire, turns: string[]): Record<string, R
   return out;
 }
 
+/** Provenance for a value AgentDoor filled in: labelled as a default for the owner to confirm. */
+const defaultProvenance = (path: string, value: unknown, lang: Lang): RuleProvenance =>
+  proposed({ kind: "owner_edit", note: DEFAULT_NOTE }, lang, `${path} = ${JSON.stringify(value)} (AgentDoor default)`, "low");
+
+/**
+ * A number the owner can be quoted for needs a number in her words. Digits (Latin or Devanagari)
+ * or a common number word in English, Hinglish or Hindi count; "pata nahi" does not.
+ */
+const NUMBER_DIGIT = /[0-9०-९]/u;
+const NUMBER_WORDS = new Set([
+  "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve",
+  "fifteen", "twenty", "dozen", "hundred", "thousand", "half", "single", "couple",
+  "ek", "do", "teen", "char", "chaar", "paanch", "panch", "chhe", "chhah", "saat", "aath", "nau", "das",
+  "gyarah", "barah", "pandrah", "bees", "sau", "hazaar", "hazar", "aadha", "adha", "dedh", "dhai",
+  "एक", "दो", "तीन", "चार", "पांच", "पाँच", "छह", "छः", "सात", "आठ", "नौ", "दस", "बारह", "पंद्रह", "बीस",
+  "सौ", "हज़ार", "हजार", "आधा", "डेढ़", "ढाई",
+]);
+
+export function quoteStatesANumber(quote: string): boolean {
+  if (NUMBER_DIGIT.test(quote)) return true;
+  return quote
+    .toLowerCase()
+    .split(/[^\p{L}\p{M}]+/u)
+    .some((word) => NUMBER_WORDS.has(word));
+}
+
+/** A numeric rule quoted from words that hold no number becomes an AgentDoor default to confirm. */
+function demoteNumberlessQuotes(draft: Json, prov: Record<string, RuleProvenance>, lang: Lang): void {
+  for (const [path, p] of Object.entries(prov)) {
+    if (p.source.kind !== "transcript" || quoteStatesANumber(p.source.quote)) continue;
+    const at = getAt(draft, path);
+    if (!at.found || typeof at.value !== "number") continue;
+    prov[path] = defaultProvenance(path, at.value, lang);
+  }
+}
+
 const isInferred = (p: RuleProvenance | undefined): boolean =>
   p?.source.kind === "owner_edit" && p.source.note === DEFAULT_NOTE;
 
@@ -137,12 +173,7 @@ class Coverage {
   private fill(path: string, why: string, def: { has: boolean; value?: unknown }): void {
     const value = def.has ? def.value : getAt(this.draft, path).value;
     if (def.has) setAt(this.draft, path, def.value);
-    this.prov[path] = proposed(
-      { kind: "owner_edit", note: DEFAULT_NOTE },
-      this.lang,
-      `${path} = ${JSON.stringify(value)} (AgentDoor default)`,
-      "low",
-    );
+    this.prov[path] = defaultProvenance(path, value, this.lang);
     this.flag(path, why);
   }
 
@@ -195,6 +226,7 @@ export function buildCompileResult(
     return { ok: false, noBusiness: true, issues: ["no business found in the transcript"] };
   const draft = stripNullHi(structuredClone(wire.policyDraft)) as Json;
   const prov = mapEvidence(wire, turns);
+  demoteNumberlessQuotes(draft, prov, wire.detectedLanguage);
   const missing = applyCoverage(draft, prov, wire);
   const issues: ValidationIssue[] = [];
   dropOrphans(draft, prov, issues);

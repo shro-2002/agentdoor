@@ -1,0 +1,54 @@
+# Typecheck plus the vitest suites (unit, property, integration) in replay mode.
+# No secrets, no model calls: `npm test` sets AGENTDOOR_LLM_MODE=replay and reads recorded fixtures.
+# Playwright e2e is not run here; see the pull request that added this file for the reason.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      # Same image, credentials and host port as docker-compose.yml; the integration tests
+      # default to 127.0.0.1:3307. The password is the committed local-only value, not a secret.
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: agentdoor-local-only
+          MYSQL_DATABASE: agentdoor
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pagentdoor-local-only"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22 # package.json engines: >=22; README: Node.js 22
+          cache: npm
+
+      - name: Install from the lockfile
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit, property and integration tests
+        run: npm test
